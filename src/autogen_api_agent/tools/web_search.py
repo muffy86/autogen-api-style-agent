@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import re
 
 import httpx
@@ -10,8 +11,11 @@ async def web_search(query: str, max_results: int = 5) -> str:
     try:
         from duckduckgo_search import DDGS
 
-        with DDGS() as ddgs:
-            results = list(ddgs.text(query, max_results=max_results))
+        def _search():
+            with DDGS() as ddgs:
+                return list(ddgs.text(query, max_results=max_results))
+
+        results = await asyncio.to_thread(_search)
 
         if not results:
             return f"No results found for: {query}"

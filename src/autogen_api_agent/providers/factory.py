@@ -23,7 +23,6 @@ class ModelClientFactory:
 
     def __init__(self, config: AppConfig):
         self.config = config
-        self._clients: dict[str, object] = {}
 
     def create(self, provider: ProviderName | None = None, model: str | None = None):
         """Create a model client for the given provider. Falls back to default."""

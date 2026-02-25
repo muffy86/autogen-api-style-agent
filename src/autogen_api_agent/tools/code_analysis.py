@@ -21,6 +21,8 @@ async def analyze_python_file(path: str) -> str:
         functions: list[str] = []
         total_lines = len(source.splitlines())
 
+        _set_parents(tree)
+
         for node in ast.walk(tree):
             if isinstance(node, ast.Import):
                 for alias in node.names:
@@ -48,26 +50,13 @@ async def analyze_python_file(path: str) -> str:
                     f"{', '.join(methods)}]"
                 )
             elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-                if isinstance(
-                    getattr(node, "_parent", None), ast.ClassDef
-                ):
+                parent = getattr(node, "_parent", None)
+                if isinstance(parent, ast.ClassDef):
                     continue
                 prefix = "async " if isinstance(node, ast.AsyncFunctionDef) else ""
                 args = [a.arg for a in node.args.args]
                 complexity = _calc_complexity(node)
                 functions.append(
-                    f"{prefix}def {node.name}({', '.join(args)}) "
-                    f"[line {node.lineno}, complexity: {complexity}]"
-                )
-
-        _set_parents(tree)
-        top_functions = []
-        for node in ast.iter_child_nodes(tree):
-            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-                prefix = "async " if isinstance(node, ast.AsyncFunctionDef) else ""
-                args = [a.arg for a in node.args.args]
-                complexity = _calc_complexity(node)
-                top_functions.append(
                     f"{prefix}def {node.name}({', '.join(args)}) "
                     f"[line {node.lineno}, complexity: {complexity}]"
                 )
@@ -86,9 +75,9 @@ async def analyze_python_file(path: str) -> str:
             for cls in classes:
                 sections.append(f"  - {cls}")
 
-        if top_functions:
-            sections.append(f"\n**Functions ({len(top_functions)}):**")
-            for fn in top_functions:
+        if functions:
+            sections.append(f"\n**Functions ({len(functions)}):**")
+            for fn in functions:
                 sections.append(f"  - {fn}")
 
         return "\n".join(sections)
@@ -101,7 +90,10 @@ async def analyze_python_file(path: str) -> str:
 async def check_syntax(code: str, language: str = "python") -> str:
     """Check code syntax for errors."""
     if language != "python":
-        return f"Syntax checking for '{language}' is not yet supported. Only Python is available."
+        return (
+            f"Syntax checking for '{language}' is not yet supported. "
+            "Only Python is available."
+        )
 
     try:
         ast.parse(code)
@@ -118,7 +110,9 @@ def _calc_complexity(node: ast.AST) -> int:
     """Calculate cyclomatic complexity of a function node."""
     complexity = 1
     for child in ast.walk(node):
-        if isinstance(child, (ast.If, ast.While, ast.For, ast.AsyncFor, ast.ExceptHandler)):
+        if isinstance(
+            child, (ast.If, ast.While, ast.For, ast.AsyncFor, ast.ExceptHandler)
+        ):
             complexity += 1
         elif isinstance(child, ast.BoolOp):
             complexity += len(child.values) - 1
