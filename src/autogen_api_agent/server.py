@@ -1,11 +1,13 @@
 """FastAPI HTTP server — OpenAI-compatible chat completions with SSE streaming."""
 from __future__ import annotations
 
+import asyncio
 import json
+import logging
 import time
 import uuid
 from collections.abc import AsyncGenerator
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -27,6 +29,8 @@ from .teams import create_team
 from .utils import extract_final_response, extract_message_text
 from .webhooks import router as webhook_router
 
+logger = logging.getLogger(__name__)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -35,7 +39,19 @@ async def lifespan(app: FastAPI):
     app.state.config = config
     app.state.factory = ModelClientFactory(config)
     app.state.sessions = SessionManager(ttl_minutes=config.session_ttl_minutes)
+
+    async def _cleanup_loop() -> None:
+        while True:
+            await asyncio.sleep(300)
+            count = await app.state.sessions.cleanup_expired()
+            if count:
+                logger.info("Cleaned up %d expired sessions", count)
+
+    cleanup_task = asyncio.create_task(_cleanup_loop())
     yield
+    cleanup_task.cancel()
+    with suppress(asyncio.CancelledError):
+        await cleanup_task
     await app.state.sessions.cleanup_all()
 
 
