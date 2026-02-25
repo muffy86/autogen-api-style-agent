@@ -104,7 +104,9 @@ async def chat_completions(request: ChatCompletionRequest):
     session.add_message("user", user_msg)
 
     try:
-        provider = request.model if request.model != "auto" else None
+        provider = None
+        if request.model and request.model != "auto" and "/" in request.model:
+            provider = request.model.split("/", 1)[0]
         team_obj = create_team(
             team_name=request.team,
             factory=factory,
@@ -141,41 +143,42 @@ async def _stream_response(
     """Stream team execution as SSE chunks."""
     chunk_id = f"chatcmpl-{uuid.uuid4().hex[:8]}"
     created = int(time.time())
-
-    yield json.dumps(
-        ChatCompletionChunk(
-            id=chunk_id,
-            created=created,
-            model=model,
-            choices=[StreamChoice(delta=StreamDelta(role="assistant"))],
-        ).model_dump()
-    )
-
     full_content = ""
-    async for message in team.run_stream(task=task):
-        text = extract_message_text(message)
-        if text:
-            full_content += text
-            yield json.dumps(
-                ChatCompletionChunk(
-                    id=chunk_id,
-                    created=created,
-                    model=model,
-                    choices=[StreamChoice(delta=StreamDelta(content=text))],
-                ).model_dump()
-            )
+    try:
+        yield json.dumps(
+            ChatCompletionChunk(
+                id=chunk_id,
+                created=created,
+                model=model,
+                choices=[StreamChoice(delta=StreamDelta(role="assistant"))],
+            ).model_dump()
+        )
 
-    yield json.dumps(
-        ChatCompletionChunk(
-            id=chunk_id,
-            created=created,
-            model=model,
-            choices=[StreamChoice(delta=StreamDelta(), finish_reason="stop")],
-        ).model_dump()
-    )
-    yield "[DONE]"
+        async for message in team.run_stream(task=task):
+            text = extract_message_text(message)
+            if text:
+                full_content += text
+                yield json.dumps(
+                    ChatCompletionChunk(
+                        id=chunk_id,
+                        created=created,
+                        model=model,
+                        choices=[StreamChoice(delta=StreamDelta(content=text))],
+                    ).model_dump()
+                )
 
-    session.add_message("assistant", full_content)
+        yield json.dumps(
+            ChatCompletionChunk(
+                id=chunk_id,
+                created=created,
+                model=model,
+                choices=[StreamChoice(delta=StreamDelta(), finish_reason="stop")],
+            ).model_dump()
+        )
+        yield "[DONE]"
+    finally:
+        if full_content:
+            session.add_message("assistant", full_content)
 
 
 # ---------------------------------------------------------------------------
