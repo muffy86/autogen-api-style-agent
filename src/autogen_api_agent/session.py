@@ -77,6 +77,11 @@ class SessionManager:
                 del self._sessions[sid]
             return len(expired)
 
+    async def cleanup_all(self) -> None:
+        """Remove all sessions (used during shutdown)."""
+        async with self._lock:
+            self._sessions.clear()
+
     async def list_sessions(self) -> list[str]:
         async with self._lock:
             return [
