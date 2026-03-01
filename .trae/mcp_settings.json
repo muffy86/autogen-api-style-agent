@@ -1,0 +1,28 @@
+{
+  "mcpServers": {
+    "autogen-agent": {
+      "command": "python",
+      "args": ["-m", "autogen_api_agent.mcp_server"],
+      "env": {},
+      "description": "AutoGen multi-agent productivity system — exposes agent_chat, agent_code_review, agent_research tools"
+    },
+    "github": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}"
+      },
+      "description": "GitHub integration for repo management"
+    },
+    "filesystem": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "${workspaceFolder}"],
+      "description": "File system access for the workspace"
+    },
+    "fetch": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-fetch"],
+      "description": "Web page fetching and content extraction"
+    }
+  }
+}

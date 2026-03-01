@@ -1,0 +1,9 @@
+- Multi-agent productivity system using AutoGen v0.7.5
+- 6 LLM providers: OpenAI, Together.ai, OpenRouter, Google Gemini, Kimi K2.5, Mistral
+- 8 agents: orchestrator, coder, reviewer, researcher, architect, tester, writer, devops
+- 4 team compositions: productivity (8), code_review (3), research (3), quick (1)
+- Interfaces: FastAPI HTTP API, Typer CLI, MCP server, GitHub webhooks
+- IDE integration: Trae.ai MCP + custom agents, Claude Code CLAUDE.md
+- Bootstrap: one-command setup scripts for Unix/Windows
+- Docker: multi-stage build with docker-compose for API + MCP services
+- CI: GitHub Actions with lint → test (matrix 3.10-3.12) → docker build

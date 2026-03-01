@@ -1,0 +1,9 @@
+- Python 3.10+ with type hints everywhere
+- Use `autogen-agentchat==0.7.5` and `autogen-ext==0.7.5`
+- Follow existing patterns in `src/autogen_api_agent/`
+- Use pydantic-settings for config, async/await for all I/O
+- All tools are async functions with docstrings (AutoGen uses docstrings as tool descriptions)
+- Run `ruff check` and `ruff format` before committing
+- Tests go in `tests/` using pytest with async support via `pytest-asyncio`
+- Provider clients must handle missing API keys gracefully with clear error messages
+- model_info dict is required for all OpenAI-compatible providers with custom base_url

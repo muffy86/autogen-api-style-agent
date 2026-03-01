@@ -1,0 +1,12 @@
+{
+  "$schema": "https://capy.ai/settings.schema.json",
+  "hooks": {
+    "setup": [
+      "pip install -e '.[dev]'"
+    ],
+    "terminals": [
+      { "name": "API Server", "command": "agent serve --reload" },
+      { "name": "MCP Server", "command": "agent mcp-serve" }
+    ]
+  }
+}

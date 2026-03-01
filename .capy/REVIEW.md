@@ -1,0 +1,10 @@
+- Verify all provider clients handle missing API keys gracefully
+- Check that model_info dict is provided for all OpenAI-compatible providers with custom base_url
+- Ensure tools have proper error handling and timeouts
+- Verify MCP server exposes all tools correctly
+- Check FastAPI endpoints return proper OpenAI-compatible response format
+- Validate session management handles concurrent requests safely
+- Confirm Docker build produces working image under 500MB
+- Bootstrap scripts must be idempotent (safe to run multiple times)
+- All .trae/ agent configs must follow the documented JSON schema
+- CI pipeline must pass lint, test, and docker build stages

@@ -191,6 +191,9 @@ cython_debug/
 # Ruff stuff:
 .ruff_cache/
 
+# IDE generated
+.vscode/mcp.json
+
 # PyPI configuration file
 .pypirc
 
