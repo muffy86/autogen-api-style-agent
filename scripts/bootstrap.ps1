@@ -102,9 +102,13 @@ foreach ($key in $providers) {
     $value = [System.Environment]::GetEnvironmentVariable($key)
     if ($value) {
         Write-Color "  ✅ $key found in environment" "Green"
-        $envContent = Get-Content ".env" -ErrorAction SilentlyContinue
-        if (-not ($envContent -match "^$key=")) {
-            Add-Content ".env" "$key=$value"
+        try {
+            $envContent = Get-Content ".env" -ErrorAction SilentlyContinue
+            if (-not ($envContent -match "^$key=")) {
+                Add-Content ".env" "$key=$value" -ErrorAction Stop
+            }
+        } catch {
+            Write-Color "  ⚠️  Failed to write $key to .env: $_" "Yellow"
         }
         $found++
     } else {

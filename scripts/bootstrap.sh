@@ -65,7 +65,9 @@ found=0
 for key in "${providers[@]}"; do
     if [ -n "${!key:-}" ]; then
         echo -e "  ${GREEN}✅ $key found in environment${NC}"
-        grep -q "^$key=" .env 2>/dev/null || echo "$key=${!key}" >> .env
+        if ! grep -q "^$key=" .env 2>/dev/null; then
+            echo "$key=${!key}" >> .env || echo -e "  ${YELLOW}⚠️  Failed to write $key to .env${NC}" >&2
+        fi
         found=$((found + 1))
     else
         echo -e "  ${YELLOW}⬚  $key not set${NC}"

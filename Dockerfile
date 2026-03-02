@@ -13,10 +13,14 @@ COPY --from=builder /usr/local/bin/agent /usr/local/bin/agent
 COPY --from=builder /app/ /app/
 
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends curl nodejs npm && \
+    apt-get install -y --no-install-recommends curl && \
     rm -rf /var/lib/apt/lists/*
 
-EXPOSE 8000
+# Node.js is NOT included — the autogen-agent MCP server is pure Python.
+# External MCP servers (@modelcontextprotocol/server-github, etc.) require
+# Node.js and should run in a separate container or on the host.
+
+EXPOSE 8000 3000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
     CMD curl -f http://localhost:8000/health || exit 1
