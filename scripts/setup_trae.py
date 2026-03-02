@@ -69,11 +69,23 @@ def setup_trae() -> None:
             except json.JSONDecodeError:
                 pass
 
+        global_servers = {}
+        for name, cfg in mcp_config.get("mcpServers", {}).items():
+            global_cfg = dict(cfg)
+            if "args" in global_cfg and any(
+                isinstance(a, str) and "${workspaceFolder}" in a
+                for a in global_cfg["args"]
+            ):
+                continue
+            global_servers[name] = global_cfg
+
         servers = existing.get("mcpServers", {})
-        servers.update(mcp_config.get("mcpServers", {}))
+        servers.update(global_servers)
         existing["mcpServers"] = servers
         global_mcp.write_text(json.dumps(existing, indent=2) + "\n")
         print(f"✅ Global Trae config updated: {global_mcp}")
+        if global_servers != mcp_config.get("mcpServers", {}):
+            print("   ℹ️  Skipped project-specific servers (${workspaceFolder}) in global config")
     else:
         print("ℹ️  Trae IDE config directory not found (Trae not installed or first run)")
         print("   Project-level .vscode/mcp.json will be used when Trae opens this folder")
