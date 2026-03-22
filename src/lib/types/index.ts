@@ -26,3 +26,31 @@ export interface AppDefinition {
   minHeight: number;
   singleton: boolean;
 }
+
+export interface ChatMessage {
+  id: string;
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+  model?: string;
+  createdAt: Date;
+}
+
+export interface Conversation {
+  id: string;
+  title: string;
+  messages: ChatMessage[];
+  model: string;
+  systemPrompt: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface AIModel {
+  id: string;
+  name: string;
+  provider: 'openai' | 'anthropic' | 'google' | 'xai' | 'groq';
+  modelId: string;
+  description: string;
+  maxTokens: number;
+  color: string;
+}
