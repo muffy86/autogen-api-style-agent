@@ -149,10 +149,19 @@
   function handleFileSelect(e: Event) {
     const input = e.target as HTMLInputElement;
     if (!input.files) return;
-    const newFiles: FileAttachment[] = [];
 
     const maxFiles = 5 - attachments.length;
+    if (maxFiles <= 0) { input.value = ''; return; }
     const filesToProcess = Array.from(input.files).slice(0, maxFiles);
+
+    const pending: FileAttachment[] = [];
+    let imagesPending = 0;
+    let imagesLoaded = 0;
+
+    function flush() {
+      if (imagesLoaded < imagesPending) return;
+      onattach([...attachments, ...pending]);
+    }
 
     for (const file of filesToProcess) {
       const type = getFileType(file);
@@ -164,21 +173,22 @@
         size: file.size,
         file,
       };
+      pending.push(attachment);
 
       if (type === 'image') {
+        imagesPending++;
         const reader = new FileReader();
         reader.onload = () => {
           attachment.dataUrl = reader.result as string;
-          onattach([...attachments, attachment]);
+          imagesLoaded++;
+          flush();
         };
         reader.readAsDataURL(file);
-      } else {
-        newFiles.push(attachment);
       }
     }
 
-    if (newFiles.length > 0) {
-      onattach([...attachments, ...newFiles]);
+    if (imagesPending === 0) {
+      flush();
     }
 
     input.value = '';

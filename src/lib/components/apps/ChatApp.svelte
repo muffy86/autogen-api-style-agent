@@ -24,6 +24,8 @@
   let messageSuggestions = $state<Record<string, string[]>>({});
   let activeToolCalls = $state<Record<string, { id: string; name: string; status: 'running' | 'completed' | 'error'; input?: Record<string, unknown>; output?: string; duration?: number }[]>>({});
   let searchOverridePrompt = $state<string | null>(null);
+  let pendingSearchResults = $state<WebSearchResult[] | null>(null);
+  let pendingToolCalls = $state<{ id: string; name: string; status: 'running' | 'completed' | 'error'; input?: Record<string, unknown>; output?: string; duration?: number }[] | null>(null);
 
   let currentModel = $derived(
     AVAILABLE_MODELS.find(m => m.id === chatStore.selectedModel) ?? AVAILABLE_MODELS[0]
@@ -52,12 +54,23 @@
         });
         fetchSuggestions(convId, message.id);
       }
+      if (pendingSearchResults) {
+        messageSearchResults = { ...messageSearchResults, [message.id]: pendingSearchResults };
+        pendingSearchResults = null;
+      }
+      if (pendingToolCalls) {
+        activeToolCalls = { ...activeToolCalls, [message.id]: pendingToolCalls };
+        pendingToolCalls = null;
+      }
       pendingConversationId = null;
       pendingModelId = null;
       searchOverridePrompt = null;
     },
     onError: (err) => {
       errorMessage = err.message || 'Something went wrong';
+      searchOverridePrompt = null;
+      pendingSearchResults = null;
+      pendingToolCalls = null;
     },
   });
 
@@ -142,7 +155,7 @@
   }
 
   async function handleSend() {
-    if (!inputValue.trim() || chat.status === 'streaming' || chat.status === 'submitted') return;
+    if ((!inputValue.trim() && attachments.length === 0) || chat.status === 'streaming' || chat.status === 'submitted') return;
 
     if (!chatStore.activeConversation) {
       chatStore.createConversation();
@@ -181,36 +194,29 @@
 
     if (searchMode) {
       const searchToolId = `tool-search-${Date.now()}`;
-      const assistantMsgId = `search-assistant-${Date.now()}`;
 
-      activeToolCalls = {
-        ...activeToolCalls,
-        [assistantMsgId]: [{
-          id: searchToolId,
-          name: 'web_search',
-          status: 'running',
-          input: { query: text },
-        }],
-      };
+      pendingToolCalls = [{
+        id: searchToolId,
+        name: 'web_search',
+        status: 'running',
+        input: { query: text },
+      }];
 
       const startTime = Date.now();
       const results = await performWebSearch(text);
       const duration = Date.now() - startTime;
 
-      activeToolCalls = {
-        ...activeToolCalls,
-        [assistantMsgId]: [{
-          id: searchToolId,
-          name: 'web_search',
-          status: 'completed',
-          input: { query: text },
-          output: `Found ${results.length} results`,
-          duration,
-        }],
-      };
+      pendingToolCalls = [{
+        id: searchToolId,
+        name: 'web_search',
+        status: 'completed',
+        input: { query: text },
+        output: `Found ${results.length} results`,
+        duration,
+      }];
 
       if (results.length > 0) {
-        messageSearchResults = { ...messageSearchResults, [assistantMsgId]: results };
+        pendingSearchResults = results;
       }
 
       const searchContext = results
