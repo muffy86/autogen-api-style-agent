@@ -17,6 +17,7 @@
     "@sveltejs/kit": "^2.50.2",
     "@sveltejs/vite-plugin-svelte": "^6.2.4",
     "@tailwindcss/vite": "^4.2.2",
+    "@types/dompurify": "^3.2.0",
     "bits-ui": "^2.16.3",
     "clsx": "^2.1.1",
     "lucide-svelte": "^0.577.0",
@@ -32,5 +33,17 @@
     "onlyBuiltDependencies": [
       "esbuild"
     ]
+  },
+  "dependencies": {
+    "@ai-sdk/anthropic": "^3.0.63",
+    "@ai-sdk/google": "^3.0.52",
+    "@ai-sdk/groq": "^3.0.31",
+    "@ai-sdk/openai": "^3.0.47",
+    "@ai-sdk/svelte": "^4.0.134",
+    "@ai-sdk/xai": "^3.0.72",
+    "ai": "^6.0.134",
+    "dompurify": "^3.3.3",
+    "highlight.js": "^11.11.1",
+    "marked": "^17.0.5"
   }
 }
