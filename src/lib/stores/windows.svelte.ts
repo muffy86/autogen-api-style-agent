@@ -181,7 +181,7 @@ class WindowStore {
       win.y = b.y;
       win.width = b.width;
       win.height = b.height;
-      if (this.snapPreview.region === 'maximize') win.isMaximized = true;
+      win.isMaximized = this.snapPreview.region === 'maximize';
     }
     this.snapPreview = null;
   }
