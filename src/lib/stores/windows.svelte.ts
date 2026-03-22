@@ -1,9 +1,10 @@
-import type { WindowState } from '$lib/types';
+import type { WindowState, SnapZone } from '$lib/types';
 import { appRegistry } from './apps.svelte';
 
 class WindowStore {
   windows = $state<WindowState[]>([]);
   nextZIndex = $state(100);
+  snapPreview = $state<SnapZone | null>(null);
 
   get activeWindow(): WindowState | undefined {
     return this.windows
@@ -141,6 +142,60 @@ class WindowStore {
     this.windows.forEach((w) => {
       w.isFocused = false;
     });
+  }
+
+  checkSnap(mouseX: number, mouseY: number): void {
+    const threshold = 20;
+    const topBarHeight = 36;
+    const dockHeight = 80;
+    const vw = typeof window !== 'undefined' ? window.innerWidth : 1920;
+    const vh = typeof window !== 'undefined' ? window.innerHeight : 1080;
+
+    if (mouseX <= threshold) {
+      this.snapPreview = {
+        region: 'left',
+        bounds: { x: 0, y: topBarHeight, width: vw / 2, height: vh - topBarHeight - dockHeight }
+      };
+    } else if (mouseX >= vw - threshold) {
+      this.snapPreview = {
+        region: 'right',
+        bounds: { x: vw / 2, y: topBarHeight, width: vw / 2, height: vh - topBarHeight - dockHeight }
+      };
+    } else if (mouseY <= threshold + topBarHeight) {
+      this.snapPreview = {
+        region: 'maximize',
+        bounds: { x: 0, y: topBarHeight, width: vw, height: vh - topBarHeight - dockHeight }
+      };
+    } else {
+      this.snapPreview = null;
+    }
+  }
+
+  applySnap(id: string): void {
+    if (!this.snapPreview) return;
+    const b = this.snapPreview.bounds;
+    const win = this.windows.find((w) => w.id === id);
+    if (win) {
+      win.preMaximizeBounds = { x: win.x, y: win.y, width: win.width, height: win.height };
+      win.x = b.x;
+      win.y = b.y;
+      win.width = b.width;
+      win.height = b.height;
+      if (this.snapPreview.region === 'maximize') win.isMaximized = true;
+    }
+    this.snapPreview = null;
+  }
+
+  clearSnap(): void {
+    this.snapPreview = null;
+  }
+
+  closeAll(appId?: string): void {
+    if (appId) {
+      this.windows = this.windows.filter((w) => w.appId !== appId);
+    } else {
+      this.windows = [];
+    }
   }
 }
 

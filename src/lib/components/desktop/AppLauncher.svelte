@@ -5,7 +5,7 @@
   import { MessageSquare, Folder, Terminal, Settings, Search } from 'lucide-svelte';
   import type { Component } from 'svelte';
 
-  const iconMap: Record<string, Component> = {
+  const iconMap: Record<string, any> = {
     'message-square': MessageSquare,
     folder: Folder,
     terminal: Terminal,

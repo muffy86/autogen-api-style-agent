@@ -54,3 +54,47 @@ export interface AIModel {
   maxTokens: number;
   color: string;
 }
+
+export interface ContextMenuItem {
+  id: string;
+  label: string;
+  icon?: any;
+  shortcut?: string;
+  separator?: boolean;
+  disabled?: boolean;
+  danger?: boolean;
+  action: () => void;
+}
+
+export interface ContextMenuState {
+  visible: boolean;
+  x: number;
+  y: number;
+  items: ContextMenuItem[];
+}
+
+export interface PaletteCommand {
+  id: string;
+  title: string;
+  description?: string;
+  icon?: any;
+  category: 'app' | 'action' | 'setting' | 'recent';
+  shortcut?: string;
+  action: () => void;
+}
+
+export interface Notification {
+  id: string;
+  type: 'info' | 'success' | 'warning' | 'error';
+  title: string;
+  message?: string;
+  icon?: any;
+  duration?: number;
+  action?: { label: string; onClick: () => void };
+  createdAt: Date;
+}
+
+export interface SnapZone {
+  region: 'left' | 'right' | 'top' | 'maximize';
+  bounds: { x: number; y: number; width: number; height: number };
+}
