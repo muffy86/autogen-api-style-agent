@@ -40,7 +40,11 @@ def main():
                 f"(attempt {retries}/{MAX_RETRIES})",
                 exc_info=True
             )
-            time.sleep(wait)
+            try:
+                time.sleep(wait)
+            except KeyboardInterrupt:
+                logger.info("Bot stopped by user during restart backoff.")
+                break
     else:
         logger.critical(f"Bot failed after {MAX_RETRIES} retries. Exiting.")
         sys.exit(1)
