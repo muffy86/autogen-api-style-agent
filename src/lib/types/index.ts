@@ -27,12 +27,58 @@ export interface AppDefinition {
   singleton: boolean;
 }
 
+export interface FileAttachment {
+  id: string;
+  name: string;
+  type: 'image' | 'document' | 'code' | 'other';
+  mimeType: string;
+  size: number;
+  dataUrl?: string;
+  file: File;
+}
+
 export interface ChatMessage {
   id: string;
   role: 'user' | 'assistant' | 'system';
   content: string;
   model?: string;
   createdAt: Date;
+  attachments?: MessageAttachment[];
+  webSearchResults?: WebSearchResult[];
+  toolCalls?: ToolCallResult[];
+  artifacts?: MessageArtifact[];
+}
+
+export interface MessageAttachment {
+  id: string;
+  name: string;
+  type: 'image' | 'document' | 'code' | 'other';
+  url: string;
+  mimeType: string;
+}
+
+export interface WebSearchResult {
+  title: string;
+  url: string;
+  snippet: string;
+  favicon?: string;
+}
+
+export interface ToolCallResult {
+  id: string;
+  name: string;
+  status: 'running' | 'completed' | 'error';
+  input?: Record<string, unknown>;
+  output?: string;
+  duration?: number;
+}
+
+export interface MessageArtifact {
+  id: string;
+  type: 'code' | 'html' | 'svg' | 'markdown' | 'mermaid';
+  title: string;
+  content: string;
+  language?: string;
 }
 
 export interface Conversation {
@@ -43,6 +89,7 @@ export interface Conversation {
   systemPrompt: string;
   createdAt: Date;
   updatedAt: Date;
+  pinned?: boolean;
 }
 
 export interface AIModel {

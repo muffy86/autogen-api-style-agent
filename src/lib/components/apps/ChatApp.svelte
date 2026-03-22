@@ -3,6 +3,7 @@
   import { DefaultChatTransport } from 'ai';
   import type { UIMessage } from 'ai';
   import { chatStore, AVAILABLE_MODELS } from '$lib/stores/chat.svelte';
+  import type { FileAttachment, WebSearchResult, MessageAttachment } from '$lib/types';
   import ChatMessage from '$lib/components/chat/ChatMessage.svelte';
   import ChatInput from '$lib/components/chat/ChatInput.svelte';
   import ConversationList from '$lib/components/chat/ConversationList.svelte';
@@ -16,6 +17,13 @@
   let inputValue = $state('');
   let pendingConversationId = $state<string | null>(null);
   let pendingModelId = $state<string | null>(null);
+  let searchMode = $state(false);
+  let attachments = $state<FileAttachment[]>([]);
+  let messageAttachments = $state<Record<string, MessageAttachment[]>>({});
+  let messageSearchResults = $state<Record<string, WebSearchResult[]>>({});
+  let messageSuggestions = $state<Record<string, string[]>>({});
+  let activeToolCalls = $state<Record<string, { id: string; name: string; status: 'running' | 'completed' | 'error'; input?: Record<string, unknown>; output?: string; duration?: number }[]>>({});
+  let searchOverridePrompt = $state<string | null>(null);
 
   let currentModel = $derived(
     AVAILABLE_MODELS.find(m => m.id === chatStore.selectedModel) ?? AVAILABLE_MODELS[0]
@@ -27,7 +35,7 @@
       body: () => ({
         provider: currentModel.provider,
         modelId: currentModel.modelId,
-        systemPrompt: chatStore.activeConversation?.systemPrompt ?? '',
+        systemPrompt: searchOverridePrompt ?? chatStore.activeConversation?.systemPrompt ?? '',
       }),
     }),
     onFinish: ({ message }) => {
@@ -42,9 +50,11 @@
           model: modelId ?? chatStore.selectedModel,
           createdAt: new Date(),
         });
+        fetchSuggestions(convId, message.id);
       }
       pendingConversationId = null;
       pendingModelId = null;
+      searchOverridePrompt = null;
     },
     onError: (err) => {
       errorMessage = err.message || 'Something went wrong';
@@ -95,7 +105,43 @@
     }
   });
 
-  function handleSend() {
+  async function performWebSearch(query: string): Promise<WebSearchResult[]> {
+    try {
+      const res = await fetch('/api/search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query }),
+      });
+      if (!res.ok) return [];
+      const data = await res.json();
+      return data.results ?? [];
+    } catch {
+      return [];
+    }
+  }
+
+  async function fetchSuggestions(convId: string, lastMsgId: string) {
+    try {
+      const conv = chatStore.conversations.find(c => c.id === convId);
+      if (!conv) return;
+      const messages = conv.messages.slice(-6).map(m => ({
+        role: m.role,
+        content: m.content.slice(0, 300),
+      }));
+      const res = await fetch('/api/suggestions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages }),
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data.suggestions?.length) {
+        messageSuggestions = { ...messageSuggestions, [lastMsgId]: data.suggestions };
+      }
+    } catch {}
+  }
+
+  async function handleSend() {
     if (!inputValue.trim() || chat.status === 'streaming' || chat.status === 'submitted') return;
 
     if (!chatStore.activeConversation) {
@@ -105,24 +151,142 @@
     const text = inputValue.trim();
     inputValue = '';
 
+    const userMsgId = `user-${Date.now()}`;
+    const currentAttachments: MessageAttachment[] = attachments.map(a => ({
+      id: a.id,
+      name: a.name,
+      type: a.type,
+      url: a.dataUrl ?? '',
+      mimeType: a.mimeType,
+    }));
+
+    if (currentAttachments.length > 0) {
+      messageAttachments = { ...messageAttachments, [userMsgId]: currentAttachments };
+    }
+    attachments = [];
+
     if (chatStore.activeConversation) {
       chatStore.addMessage(chatStore.activeConversation.id, {
-        id: `user-${Date.now()}`,
+        id: userMsgId,
         role: 'user',
         content: text,
         createdAt: new Date(),
+        attachments: currentAttachments.length > 0 ? currentAttachments : undefined,
       });
     }
 
     pendingConversationId = chatStore.activeConversationId;
     pendingModelId = chatStore.selectedModel;
     errorMessage = null;
-    chat.sendMessage({ text });
+
+    if (searchMode) {
+      const searchToolId = `tool-search-${Date.now()}`;
+      const assistantMsgId = `search-assistant-${Date.now()}`;
+
+      activeToolCalls = {
+        ...activeToolCalls,
+        [assistantMsgId]: [{
+          id: searchToolId,
+          name: 'web_search',
+          status: 'running',
+          input: { query: text },
+        }],
+      };
+
+      const startTime = Date.now();
+      const results = await performWebSearch(text);
+      const duration = Date.now() - startTime;
+
+      activeToolCalls = {
+        ...activeToolCalls,
+        [assistantMsgId]: [{
+          id: searchToolId,
+          name: 'web_search',
+          status: 'completed',
+          input: { query: text },
+          output: `Found ${results.length} results`,
+          duration,
+        }],
+      };
+
+      if (results.length > 0) {
+        messageSearchResults = { ...messageSearchResults, [assistantMsgId]: results };
+      }
+
+      const searchContext = results
+        .map((r, i) => `${i + 1}. ${r.title} (${r.url}): ${r.snippet}`)
+        .join('\n');
+
+      searchOverridePrompt = `The user asked: "${text}"\n\nHere are relevant web search results:\n${searchContext}\n\nUse these results to provide an accurate, up-to-date answer. Cite sources with [1], [2] etc.`;
+
+      chat.sendMessage({ text });
+      searchMode = false;
+    } else {
+      chat.sendMessage({ text });
+    }
+  }
+
+  function handleStop() {
+    chat.stop();
   }
 
   function handleRetry() {
     errorMessage = null;
     chat.regenerate();
+  }
+
+  function handleRegenerate() {
+    pendingConversationId = chatStore.activeConversationId;
+    pendingModelId = chatStore.selectedModel;
+    chat.regenerate();
+  }
+
+  function handleSuggest(text: string) {
+    inputValue = text;
+    requestAnimationFrame(() => handleSend());
+  }
+
+  function handleSlashCommand(cmd: string, arg: string) {
+    switch (cmd) {
+      case 'search':
+        if (arg.trim()) {
+          searchMode = true;
+          inputValue = arg.trim();
+          requestAnimationFrame(() => handleSend());
+        } else {
+          searchMode = true;
+          inputValue = '';
+        }
+        break;
+      case 'system':
+        if (arg.trim() && chatStore.activeConversation) {
+          chatStore.updateSystemPrompt(chatStore.activeConversation.id, arg.trim());
+        }
+        inputValue = '';
+        break;
+      case 'clear':
+        if (chatStore.activeConversation) {
+          chat.messages = [];
+          chatStore.activeConversation.messages = [];
+          chatStore.save();
+        }
+        inputValue = '';
+        break;
+      case 'model':
+        if (arg.trim()) {
+          const found = AVAILABLE_MODELS.find(
+            m => m.name.toLowerCase().includes(arg.toLowerCase()) || m.id.toLowerCase().includes(arg.toLowerCase())
+          );
+          if (found) chatStore.setModel(found.id);
+        }
+        inputValue = '';
+        break;
+      case 'image':
+        inputValue = '';
+        break;
+      default:
+        inputValue = '';
+    }
   }
 
   function startWithPrompt(prompt: string) {
@@ -198,11 +362,19 @@
         {#each chat.messages as msg, i (msg.id)}
           {@const text = getMessageText(msg)}
           {@const isStreamingMsg = isLoading && i === chat.messages.length - 1 && msg.role === 'assistant'}
+          {@const isLast = i === chat.messages.length - 1 && msg.role === 'assistant'}
           <ChatMessage
             role={msg.role === 'user' ? 'user' : 'assistant'}
             content={text}
             model={msg.role === 'assistant' ? chatStore.selectedModel : undefined}
             isStreaming={isStreamingMsg}
+            isLastMessage={isLast}
+            attachments={messageAttachments[msg.id]}
+            webSearchResults={messageSearchResults[msg.id]}
+            toolCalls={activeToolCalls[msg.id]}
+            suggestions={messageSuggestions[msg.id]}
+            onSuggest={handleSuggest}
+            onRegenerate={handleRegenerate}
           />
         {/each}
         {#if isLoading && (chat.messages.length === 0 || chat.messages[chat.messages.length - 1].role === 'user')}
@@ -233,8 +405,15 @@
     <ChatInput
       value={inputValue}
       {isLoading}
+      {attachments}
+      {searchMode}
       onsubmit={handleSend}
       oninput={(val) => (inputValue = val)}
+      onattach={(files) => (attachments = files)}
+      onremoveattachment={(id) => (attachments = attachments.filter(a => a.id !== id))}
+      onstop={handleStop}
+      onsearchtoggle={() => (searchMode = !searchMode)}
+      onslashcommand={handleSlashCommand}
     />
   </div>
 </div>
