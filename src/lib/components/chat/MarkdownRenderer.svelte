@@ -9,6 +9,12 @@
 
   let { content }: Props = $props();
 
+  let containerEl: HTMLDivElement | undefined = $state(undefined);
+
+  function encodeDataCode(text: string): string {
+    return btoa(encodeURIComponent(text));
+  }
+
   let rendered = $derived.by(() => {
     const renderer = new marked.Renderer();
 
@@ -21,11 +27,11 @@
       } catch {
         highlighted = hljs.highlightAuto(text).value;
       }
-      const escaped = text.replace(/`/g, '\\`').replace(/\$/g, '\\$');
+      const encoded = encodeDataCode(text);
       return `<div class="code-block-wrapper">
         <div class="code-block-header">
           <span class="code-lang">${label}</span>
-          <button class="copy-btn" onclick="(() => { navigator.clipboard.writeText(\`${escaped}\`); const el = event.target; el.textContent = 'Copied!'; setTimeout(() => el.textContent = 'Copy', 1500); })()">Copy</button>
+          <button class="copy-btn" data-code="${encoded}">Copy</button>
         </div>
         <pre><code class="hljs language-${language}">${highlighted}</code></pre>
       </div>`;
@@ -43,13 +49,36 @@
 
     const rawHtml = marked.parse(content) as string;
     return DOMPurify.sanitize(rawHtml, {
-      ADD_ATTR: ['onclick'],
       ADD_TAGS: ['button'],
+      ADD_ATTR: ['data-code'],
     });
+  });
+
+  $effect(() => {
+    void rendered;
+    if (!containerEl) return;
+
+    function handleCopyClick(e: Event) {
+      const btn = (e.target as HTMLElement).closest('.copy-btn') as HTMLElement | null;
+      if (!btn) return;
+      const encoded = btn.getAttribute('data-code') ?? '';
+      let code: string;
+      try {
+        code = decodeURIComponent(atob(encoded));
+      } catch {
+        code = '';
+      }
+      navigator.clipboard.writeText(code);
+      btn.textContent = 'Copied!';
+      setTimeout(() => { btn.textContent = 'Copy'; }, 1500);
+    }
+
+    containerEl.addEventListener('click', handleCopyClick);
+    return () => containerEl?.removeEventListener('click', handleCopyClick);
   });
 </script>
 
-<div class="markdown-body">
+<div class="markdown-body" bind:this={containerEl}>
   {@html rendered}
 </div>
 

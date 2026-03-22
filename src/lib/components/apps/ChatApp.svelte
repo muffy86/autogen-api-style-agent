@@ -14,6 +14,8 @@
   let sidebarCollapsed = $state(false);
   let errorMessage = $state<string | null>(null);
   let inputValue = $state('');
+  let pendingConversationId = $state<string | null>(null);
+  let pendingModelId = $state<string | null>(null);
 
   let currentModel = $derived(
     AVAILABLE_MODELS.find(m => m.id === chatStore.selectedModel) ?? AVAILABLE_MODELS[0]
@@ -29,16 +31,20 @@
       }),
     }),
     onFinish: ({ message }) => {
-      if (chatStore.activeConversation) {
+      const convId = pendingConversationId;
+      const modelId = pendingModelId;
+      if (convId) {
         const text = getMessageText(message);
-        chatStore.addMessage(chatStore.activeConversation.id, {
+        chatStore.addMessage(convId, {
           id: message.id,
           role: 'assistant',
           content: text,
-          model: chatStore.selectedModel,
+          model: modelId ?? chatStore.selectedModel,
           createdAt: new Date(),
         });
       }
+      pendingConversationId = null;
+      pendingModelId = null;
     },
     onError: (err) => {
       errorMessage = err.message || 'Something went wrong';
@@ -108,6 +114,8 @@
       });
     }
 
+    pendingConversationId = chatStore.activeConversationId;
+    pendingModelId = chatStore.selectedModel;
     errorMessage = null;
     chat.sendMessage({ text });
   }
