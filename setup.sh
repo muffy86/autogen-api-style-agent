@@ -29,12 +29,24 @@ if [ "$IS_TERMUX" = true ]; then
     pkg install -y python tmux git
 else
     if command -v apt-get &>/dev/null; then
-        sudo apt-get update -y
-        sudo apt-get install -y python3 python3-pip python3-venv tmux git
+        if command -v sudo &>/dev/null; then
+            sudo apt-get update -y
+            sudo apt-get install -y python3 python3-pip python3-venv tmux git
+        else
+            warn "sudo not available. Please install manually: python3 python3-pip python3-venv tmux git"
+        fi
     elif command -v dnf &>/dev/null; then
-        sudo dnf install -y python3 python3-pip tmux git
+        if command -v sudo &>/dev/null; then
+            sudo dnf install -y python3 python3-pip tmux git
+        else
+            warn "sudo not available. Please install manually: python3 python3-pip tmux git"
+        fi
     elif command -v pacman &>/dev/null; then
-        sudo pacman -Sy --noconfirm python python-pip tmux git
+        if command -v sudo &>/dev/null; then
+            sudo pacman -Sy --noconfirm python python-pip tmux git
+        else
+            warn "sudo not available. Please install manually: python python-pip tmux git"
+        fi
     else
         warn "Unknown package manager. Ensure python3, pip, tmux, and git are installed."
     fi

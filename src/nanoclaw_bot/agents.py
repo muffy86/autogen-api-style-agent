@@ -16,7 +16,7 @@ class AgentStatus:
 class AgentManager:
     """Manages AI agent processes via tmux sessions."""
 
-    SESSION_PREFIX = "nanoclaw_"
+    SESSION_PREFIX = "nanoclaw_agent_"
 
     def __init__(self):
         self._validate_tmux()
