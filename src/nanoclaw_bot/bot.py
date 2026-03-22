@@ -1,3 +1,4 @@
+import time
 from pathlib import Path
 from dotenv import load_dotenv
 from telegram.ext import Application
@@ -15,6 +16,7 @@ def create_bot(env_path: Path | None = None) -> Application:
     app = Application.builder().token(token).build()
 
     app.bot_data["config"] = config
+    app.bot_data["start_time"] = time.time()
 
     register_handlers(app)
 

@@ -13,10 +13,7 @@ async def status_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Show system health and status information."""
     config: ConfigManager = context.bot_data["config"]
 
-    if "start_time" not in context.bot_data:
-        context.bot_data["start_time"] = time.time()
-
-    uptime_seconds = int(time.time() - context.bot_data.get("start_time", time.time()))
+    uptime_seconds = int(time.time() - context.bot_data["start_time"])
     hours, remainder = divmod(uptime_seconds, 3600)
     minutes, seconds = divmod(remainder, 60)
     uptime_str = f"{hours}h {minutes}m {seconds}s"
@@ -33,7 +30,18 @@ async def status_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"• *Platform:* {platform}",
         f"• *Uptime:* {uptime_str}",
         f"• *API Keys:* {len(api_keys)} configured",
-        f"• *Config file:* `{config.env_path}`",
     ]
+
+    try:
+        from nanoclaw_bot.agents import AgentManager
+        mgr = AgentManager()
+        agent_count = len(mgr.list_sessions())
+        status_lines.append(f"• *Agents:* {agent_count} running")
+    except Exception:
+        status_lines.append("• *Agents:* N/A")
+
+    status_lines.extend([
+        f"• *Config file:* `{config.env_path}`",
+    ])
 
     await update.message.reply_text("\n".join(status_lines), parse_mode="Markdown")

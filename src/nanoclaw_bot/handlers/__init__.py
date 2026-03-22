@@ -4,6 +4,7 @@ from nanoclaw_bot.handlers.configure import configure_handler
 from nanoclaw_bot.handlers.keys import keys_handler
 from nanoclaw_bot.handlers.status import status_handler
 from nanoclaw_bot.handlers.help import help_handler
+from nanoclaw_bot.handlers.agents import agents_handler
 
 
 def register_handlers(app: Application):
@@ -13,3 +14,4 @@ def register_handlers(app: Application):
     app.add_handler(CommandHandler("keys", keys_handler))
     app.add_handler(CommandHandler("status", status_handler))
     app.add_handler(CommandHandler("help", help_handler))
+    app.add_handler(CommandHandler("agents", agents_handler))
