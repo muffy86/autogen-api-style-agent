@@ -1,42 +1,40 @@
-# sv
+# NanoClaw Bot
 
-Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
+Telegram bot for remote AI agent configuration and management. Designed for Termux (Android) and Linux.
 
-## Creating a project
+## Quick Start
 
-If you're seeing this, you've probably already done this step. Congrats!
+1. Create a Telegram bot via [@BotFather](https://t.me/BotFather)
+2. Get your chat ID via [@userinfobot](https://t.me/userinfobot)
+3. Clone and install:
 
-```sh
-# create a new project
-npx sv create my-app
+```bash
+git clone https://github.com/muffy86/autogen-api-style-agent.git
+cd autogen-api-style-agent
+pip install -e .
 ```
 
-To recreate this project with the same configuration:
+4. Configure:
 
-```sh
-# recreate this project
-npx sv@0.12.8 create --template minimal --types ts --no-install .
+```bash
+cp .env.example .env
+# Edit .env with your bot token and chat ID
 ```
 
-## Developing
+5. Run:
 
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
-
-```sh
-npm run dev
-
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
+```bash
+python -m nanoclaw_bot
 ```
 
-## Building
+6. Message your bot: `/configure OPENAI_API_KEY=sk-...`
 
-To create a production version of your app:
+## Commands
 
-```sh
-npm run build
-```
-
-You can preview the production build with `npm run preview`.
-
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
+| Command | Description |
+|---------|-------------|
+| `/start` | Welcome + quick-start instructions |
+| `/configure KEY=val ...` | Set API keys securely |
+| `/keys` | View configured keys (masked) |
+| `/status` | System health check |
+| `/help` | Full command reference |
