@@ -2,7 +2,21 @@
 
 Telegram bot for remote AI agent configuration and management. Designed for Termux (Android) and Linux.
 
-## Quick Start
+## One-Tap Setup (Termux / Linux)
+
+```bash
+curl -sSL https://raw.githubusercontent.com/muffy86/autogen-api-style-agent/main/setup.sh | bash
+```
+
+Or clone and run manually:
+
+```bash
+git clone https://github.com/muffy86/autogen-api-style-agent.git
+cd autogen-api-style-agent
+bash setup.sh
+```
+
+## Manual Setup
 
 1. Create a Telegram bot via [@BotFather](https://t.me/BotFather)
 2. Get your chat ID via [@userinfobot](https://t.me/userinfobot)
@@ -11,6 +25,8 @@ Telegram bot for remote AI agent configuration and management. Designed for Term
 ```bash
 git clone https://github.com/muffy86/autogen-api-style-agent.git
 cd autogen-api-style-agent
+python3 -m venv .venv
+source .venv/bin/activate
 pip install -e .
 ```
 
@@ -37,4 +53,26 @@ python -m nanoclaw_bot
 | `/configure KEY=val ...` | Set API keys securely |
 | `/keys` | View configured keys (masked) |
 | `/status` | System health check |
+| `/agents` | List running agent sessions |
+| `/agents start <name> <cmd>` | Start an agent in tmux |
+| `/agents stop <name>` | Stop an agent |
+| `/agents restart <name> <cmd>` | Restart an agent |
+| `/agents logs <name>` | View agent output |
 | `/help` | Full command reference |
+
+## Agent Management
+
+Agents run in isolated tmux sessions. Start any process as an agent:
+
+```
+/agents start mybot python my_agent.py
+/agents start webserver npm start
+/agents logs mybot
+/agents stop mybot
+```
+
+## Security
+
+- All commands restricted to configured owner chat ID
+- API keys stored in `.env` with 0600 permissions
+- Bot rejects ALL messages when owner ID is not configured

@@ -12,6 +12,8 @@ async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "• /configure KEY=val KEY=val — Set API keys\n"
         "• /keys — View configured keys (masked)\n"
         "• /status — System health check\n"
+        "• /shell <cmd> — Run shell commands\n"
+        "• /logs — View bot logs\n"
         "• /help — Full help\n\n"
         "Quick start:\n"
         "`/configure OPENAI_API_KEY=sk-... ANTHROPIC_API_KEY=sk-ant-...`",
