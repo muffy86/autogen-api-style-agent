@@ -27,6 +27,9 @@ def main_menu_keyboard() -> InlineKeyboardMarkup:
             InlineKeyboardButton("🔄 Update", callback_data="menu_update"),
             InlineKeyboardButton("❓ Help", callback_data="menu_help"),
         ],
+        [
+            InlineKeyboardButton("🧬 Eliza", callback_data="menu_eliza"),
+        ],
     ]
     return InlineKeyboardMarkup(keyboard)
 
@@ -190,8 +193,38 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "• `/agents start <n> <cmd>` — Start agent\n"
             "• `/shell <cmd>` — Run command\n"
             "• `/notify on` — Enable crash alerts\n"
+            "• `/eliza <prompt>` — AI personality engine\n"
             "• `/update` — Self-update\n\n"
             "Full reference: /help"
+        )
+        keyboard = [[InlineKeyboardButton("🔙 Back", callback_data="menu_main")]]
+        await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
+
+    elif data == "menu_eliza":
+        from nanoclaw_bot.eliza import ElizaOSIntegration
+        eliza = context.bot_data.get("eliza")
+        if not eliza:
+            eliza = ElizaOSIntegration()
+            context.bot_data["eliza"] = eliza
+
+        chat_id = query.message.chat_id
+        p = eliza.get_personality(chat_id)
+        p_name = eliza.get_personality_name(chat_id)
+        mem_size = eliza.get_memory_size(chat_id)
+        available = ", ".join(
+            f"{v['emoji']}{v['name']}" for v in ElizaOSIntegration.PERSONALITIES.values()
+        )
+
+        text = (
+            f"🧬 *Eliza AI Personality Engine*\n\n"
+            f"• *Personality:* {p['emoji']} {p['name']} (`{p_name}`)\n"
+            f"• *Memory:* {mem_size} messages\n"
+            f"• *Available:* {available}\n\n"
+            f"*Commands:*\n"
+            f"• `/eliza set <mode>` — Switch personality\n"
+            f"• `/eliza <prompt>` — Enhance prompt\n"
+            f"• `/eliza clear` — Clear memory\n"
+            f"• `/eliza list` — List personalities"
         )
         keyboard = [[InlineKeyboardButton("🔙 Back", callback_data="menu_main")]]
         await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")

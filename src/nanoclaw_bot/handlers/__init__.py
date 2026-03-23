@@ -11,6 +11,7 @@ from nanoclaw_bot.handlers.update import update_handler
 from nanoclaw_bot.handlers.notify import notify_handler
 from nanoclaw_bot.handlers.keyboard import callback_handler
 from nanoclaw_bot.handlers.backup import backup_handler
+from nanoclaw_bot.handlers.eliza import eliza_handler
 
 
 def register_handlers(app: Application):
@@ -26,4 +27,5 @@ def register_handlers(app: Application):
     app.add_handler(CommandHandler("update", update_handler))
     app.add_handler(CommandHandler("notify", notify_handler))
     app.add_handler(CommandHandler("backup", backup_handler))
+    app.add_handler(CommandHandler("eliza", eliza_handler))
     app.add_handler(CallbackQueryHandler(callback_handler))
