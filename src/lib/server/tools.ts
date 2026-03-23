@@ -70,13 +70,31 @@ export const elysiumTools = {
     parameters: z.object({
       url: z.string().url().describe('The URL to fetch'),
     }),
-    execute: async ({ url }) => {
+    execute: async ({ url: targetUrl }) => {
       try {
-        const res = await fetch(url, {
+        const parsed = new URL(targetUrl);
+        const hostname = parsed.hostname.toLowerCase();
+        const blockedPatterns = [
+          /^localhost$/,
+          /^127\./,
+          /^10\./,
+          /^172\.(1[6-9]|2\d|3[01])\./,
+          /^192\.168\./,
+          /^169\.254\./,
+          /^0\./,
+          /^\[::1\]$/,
+          /^\[fc/,
+          /^\[fd/,
+        ];
+        if (blockedPatterns.some(p => p.test(hostname)) || parsed.protocol === 'file:') {
+          return { error: 'Access to internal/private URLs is not allowed', url: targetUrl };
+        }
+
+        const res = await fetch(targetUrl, {
           headers: { 'User-Agent': 'Elysium-AI/1.0' },
           signal: AbortSignal.timeout(10000),
         });
-        if (!res.ok) return { error: `HTTP ${res.status}: ${res.statusText}`, url };
+        if (!res.ok) return { error: `HTTP ${res.status}: ${res.statusText}`, url: targetUrl };
         const html = await res.text();
         const text = html
           .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
@@ -85,9 +103,9 @@ export const elysiumTools = {
           .replace(/\s+/g, ' ')
           .trim()
           .slice(0, 5000);
-        return { content: text, url, length: text.length };
+        return { content: text, url: targetUrl, length: text.length };
       } catch (e: any) {
-        return { error: e.message, url };
+        return { error: e.message, url: targetUrl };
       }
     },
   }),
