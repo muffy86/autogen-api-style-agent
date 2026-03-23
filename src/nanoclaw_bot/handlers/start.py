@@ -15,6 +15,7 @@ async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "• /shell <cmd> — Run shell commands\n"
         "• /logs — View bot logs\n"
         "• /update — Self-update from GitHub\n"
+        "• /notify — Agent crash alerts\n"
         "• /help — Full help\n\n"
         "Quick start:\n"
         "`/configure OPENAI_API_KEY=sk-... ANTHROPIC_API_KEY=sk-ant-...`",

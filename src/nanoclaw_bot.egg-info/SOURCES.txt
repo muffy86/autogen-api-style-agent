@@ -19,6 +19,7 @@ src/nanoclaw_bot/handlers/configure.py
 src/nanoclaw_bot/handlers/help.py
 src/nanoclaw_bot/handlers/keys.py
 src/nanoclaw_bot/handlers/logs.py
+src/nanoclaw_bot/handlers/notify.py
 src/nanoclaw_bot/handlers/shell.py
 src/nanoclaw_bot/handlers/start.py
 src/nanoclaw_bot/handlers/status.py
@@ -27,6 +28,7 @@ tests/test_agents.py
 tests/test_config.py
 tests/test_handlers.py
 tests/test_logs.py
+tests/test_notify.py
 tests/test_security.py
 tests/test_shell.py
 tests/test_update.py

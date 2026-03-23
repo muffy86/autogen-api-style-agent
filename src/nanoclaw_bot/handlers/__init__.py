@@ -8,6 +8,7 @@ from nanoclaw_bot.handlers.agents import agents_handler
 from nanoclaw_bot.handlers.shell import shell_handler
 from nanoclaw_bot.handlers.logs import logs_handler
 from nanoclaw_bot.handlers.update import update_handler
+from nanoclaw_bot.handlers.notify import notify_handler
 
 
 def register_handlers(app: Application):
@@ -21,3 +22,4 @@ def register_handlers(app: Application):
     app.add_handler(CommandHandler("shell", shell_handler))
     app.add_handler(CommandHandler("logs", logs_handler))
     app.add_handler(CommandHandler("update", update_handler))
+    app.add_handler(CommandHandler("notify", notify_handler))

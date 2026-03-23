@@ -50,6 +50,9 @@ async def agents_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         name, command = start_parts
         started = manager.start_agent(name, command)
         if started:
+            if "watched_agents" not in context.bot_data:
+                context.bot_data["watched_agents"] = {}
+            context.bot_data["watched_agents"][name] = {"command": command, "working_dir": None}
             await update.message.reply_text(f"✅ Agent `{name}` started.\nCommand: `{command}`", parse_mode="Markdown")
         else:
             await update.message.reply_text(f"⚠️ Agent `{name}` is already running.\nUse `/agents restart {name} {command}` to restart.", parse_mode="Markdown")
@@ -61,6 +64,8 @@ async def agents_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
         stopped = manager.stop_agent(name)
         if stopped:
+            watched = context.bot_data.get("watched_agents", {})
+            watched.pop(name, None)
             await update.message.reply_text(f"🛑 Agent `{name}` stopped.", parse_mode="Markdown")
         else:
             await update.message.reply_text(f"⚠️ Agent `{name}` is not running.", parse_mode="Markdown")
