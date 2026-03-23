@@ -44,11 +44,13 @@
           (part as any).toolInvocation?.result?.saved
         ) {
           const result = (part as any).toolInvocation.result;
-          memoryStore.add(
-            result.content,
-            convId || 'unknown',
-            result.importance ?? 3
-          );
+          if (memoryStore.enabled) {
+            memoryStore.add(
+              result.content,
+              convId || 'unknown',
+              result.importance ?? 3
+            );
+          }
         }
       }
 

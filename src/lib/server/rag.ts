@@ -35,6 +35,10 @@ class RAGStore {
     }
     this.computeIdf();
 
+    for (const chunk of this.chunks) {
+      chunk.vector = this.computeTfIdf(chunk.content);
+    }
+
     for (const chunk of chunks) {
       this.chunks.push({
         id: `chunk-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
@@ -50,6 +54,9 @@ class RAGStore {
     this.chunks = this.chunks.filter(c => c.fileId !== fileId);
     this.rebuildVocabulary();
     this.computeIdf();
+    for (const chunk of this.chunks) {
+      chunk.vector = this.computeTfIdf(chunk.content);
+    }
   }
 
   getChunkCount(fileId: string): number {
