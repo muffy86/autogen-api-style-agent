@@ -15,6 +15,7 @@ src/nanoclaw_bot.egg-info/requires.txt
 src/nanoclaw_bot.egg-info/top_level.txt
 src/nanoclaw_bot/handlers/__init__.py
 src/nanoclaw_bot/handlers/agents.py
+src/nanoclaw_bot/handlers/backup.py
 src/nanoclaw_bot/handlers/configure.py
 src/nanoclaw_bot/handlers/help.py
 src/nanoclaw_bot/handlers/keyboard.py
@@ -26,6 +27,7 @@ src/nanoclaw_bot/handlers/start.py
 src/nanoclaw_bot/handlers/status.py
 src/nanoclaw_bot/handlers/update.py
 tests/test_agents.py
+tests/test_backup.py
 tests/test_config.py
 tests/test_handlers.py
 tests/test_keyboard.py

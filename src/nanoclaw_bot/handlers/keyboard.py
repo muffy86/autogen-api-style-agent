@@ -21,9 +21,10 @@ def main_menu_keyboard() -> InlineKeyboardMarkup:
         ],
         [
             InlineKeyboardButton("📋 Logs", callback_data="menu_logs"),
-            InlineKeyboardButton("🔄 Update", callback_data="menu_update"),
+            InlineKeyboardButton("📦 Backup", callback_data="menu_backup"),
         ],
         [
+            InlineKeyboardButton("🔄 Update", callback_data="menu_update"),
             InlineKeyboardButton("❓ Help", callback_data="menu_help"),
         ],
     ]
@@ -168,6 +169,16 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "To update, use the text command:\n"
             "`/update`\n\n"
             "This will pull latest code, reinstall deps, and restart."
+        )
+        keyboard = [[InlineKeyboardButton("🔙 Back", callback_data="menu_main")]]
+        await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
+
+    elif data == "menu_backup":
+        text = (
+            "📦 *Backup*\n\n"
+            "To export config, use the text command:\n"
+            "`/backup`\n\n"
+            "Sends a JSON file with key names, agent list, and settings."
         )
         keyboard = [[InlineKeyboardButton("🔙 Back", callback_data="menu_main")]]
         await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")

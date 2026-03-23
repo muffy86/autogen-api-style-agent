@@ -15,6 +15,7 @@ async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "• `/shell <cmd>` — Run shell commands\n"
         "• `/notify on` — Enable crash alerts\n"
         "• `/update` — Self-update from GitHub\n"
+        "• `/backup` — Export config backup\n"
         "• `/help` — Full command reference",
         reply_markup=main_menu_keyboard(),
         parse_mode="Markdown"
