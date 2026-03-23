@@ -54,6 +54,13 @@ class ThemeStore {
       if (saved) this.theme = saved;
       const savedAccent = localStorage.getItem('elysium-accent');
       if (savedAccent) this.accentColor = savedAccent;
+
+      const mql = window.matchMedia('(prefers-color-scheme: light)');
+      mql.addEventListener('change', () => {
+        if (this.theme === 'system') {
+          this.theme = 'system';
+        }
+      });
     }
   }
 
