@@ -56,6 +56,17 @@ class AppRegistry {
       minWidth: 400,
       minHeight: 300,
       singleton: true
+    },
+    {
+      id: 'dashboard',
+      name: 'Dashboard',
+      icon: 'layout-dashboard',
+      description: 'Platform dashboard & automation hub',
+      defaultWidth: 1000,
+      defaultHeight: 650,
+      minWidth: 750,
+      minHeight: 500,
+      singleton: true
     }
   ]);
 

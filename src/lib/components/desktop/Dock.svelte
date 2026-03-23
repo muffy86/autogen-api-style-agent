@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Sparkles, MessageSquare, Folder, Terminal, Settings, Search } from 'lucide-svelte';
+  import { Sparkles, MessageSquare, Folder, Terminal, Settings, Search, LayoutDashboard } from 'lucide-svelte';
   import { windowStore } from '$lib/stores/windows.svelte';
   import { desktopState } from '$lib/stores/desktop.svelte';
 
@@ -9,7 +9,8 @@
     { id: 'files', name: 'Files', icon: Folder, isLauncher: false },
     { id: 'terminal', name: 'Terminal', icon: Terminal, isLauncher: false },
     { id: 'settings', name: 'Settings', icon: Settings, isLauncher: false },
-    { id: 'search', name: 'Search', icon: Search, isLauncher: false }
+    { id: 'search', name: 'Search', icon: Search, isLauncher: false },
+    { id: 'dashboard', name: 'Dashboard', icon: LayoutDashboard, isLauncher: false }
   ];
 
   function handleClick(app: (typeof dockApps)[number]) {
