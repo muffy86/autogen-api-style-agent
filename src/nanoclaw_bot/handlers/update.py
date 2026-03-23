@@ -18,7 +18,11 @@ async def _run_cmd(cmd: str, cwd: str | None = None) -> tuple[str, str, int]:
         stderr=asyncio.subprocess.PIPE,
         cwd=cwd,
     )
-    stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=120)
+    try:
+        stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=120)
+    except asyncio.TimeoutError:
+        proc.kill()
+        return ("", "Command timed out after 120 seconds", -1)
     return (
         stdout.decode(errors="replace").rstrip(),
         stderr.decode(errors="replace").rstrip(),
