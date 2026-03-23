@@ -2,7 +2,7 @@
   import { desktopState } from '$lib/stores/desktop.svelte';
   import { windowStore } from '$lib/stores/windows.svelte';
   import { appRegistry } from '$lib/stores/apps.svelte';
-  import { MessageSquare, Folder, Terminal, Settings, Search } from 'lucide-svelte';
+  import { MessageSquare, Folder, Terminal, Settings, Search, LayoutDashboard } from 'lucide-svelte';
   import type { Component } from 'svelte';
 
   const iconMap: Record<string, Component> = {
@@ -10,7 +10,8 @@
     folder: Folder,
     terminal: Terminal,
     settings: Settings,
-    search: Search
+    search: Search,
+    'layout-dashboard': LayoutDashboard
   };
 
   function launchApp(appId: string) {
