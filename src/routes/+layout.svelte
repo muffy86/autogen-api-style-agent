@@ -1,6 +1,18 @@
 <script lang="ts">
   import '../app.css';
+  import { themeStore } from '$lib/stores/theme.svelte';
+
   let { children } = $props();
+
+  $effect(() => {
+    if (typeof document !== 'undefined') {
+      document.documentElement.setAttribute('data-theme', themeStore.resolved);
+    }
+  });
+
+  $effect(() => {
+    themeStore.initAccent();
+  });
 </script>
 
 <svelte:head>
