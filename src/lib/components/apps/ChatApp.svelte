@@ -201,6 +201,7 @@
           <ChatMessage
             role={msg.role === 'user' ? 'user' : 'assistant'}
             content={text}
+            parts={msg.parts}
             model={msg.role === 'assistant' ? chatStore.selectedModel : undefined}
             isStreaming={isStreamingMsg}
           />
