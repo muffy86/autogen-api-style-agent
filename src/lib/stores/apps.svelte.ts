@@ -67,6 +67,17 @@ class AppRegistry {
       minWidth: 750,
       minHeight: 500,
       singleton: true
+    },
+    {
+      id: 'knowledge',
+      name: 'Knowledge',
+      icon: 'book-open',
+      description: 'RAG knowledge base & document manager',
+      defaultWidth: 900,
+      defaultHeight: 600,
+      minWidth: 650,
+      minHeight: 450,
+      singleton: true
     }
   ]);
 

@@ -19,6 +19,8 @@
     calculator: '\u{1F9EE}',
     urlFetch: '\u{1F310}',
     codeExec: '\u{1F4BB}',
+    knowledgeSearch: '\u{1F4DA}',
+    saveMemory: '\u{1F9E0}',
   };
 
   const toolLabels: Record<string, string> = {
@@ -26,6 +28,8 @@
     calculator: 'Calculator',
     urlFetch: 'URL Fetch',
     codeExec: 'Code Execution',
+    knowledgeSearch: 'Knowledge Search',
+    saveMemory: 'Save Memory',
   };
 
   function formatToolResult(result: any): string {
@@ -85,6 +89,10 @@
             <span class="tool-arg-text tool-url">{inv.args.url}</span>
           {:else if inv.toolName === 'codeExec' && inv.args?.code}
             <pre class="tool-code">{inv.args.code.slice(0, 200)}{inv.args.code.length > 200 ? '...' : ''}</pre>
+          {:else if inv.toolName === 'knowledgeSearch' && inv.args?.query}
+            <span class="tool-arg-text">"{inv.args.query}"</span>
+          {:else if inv.toolName === 'saveMemory' && inv.args?.content}
+            <span class="tool-arg-text">{inv.args.content.slice(0, 120)}{inv.args.content.length > 120 ? '...' : ''}</span>
           {/if}
         </div>
         {#if isDone && inv.result}

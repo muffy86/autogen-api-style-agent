@@ -3,6 +3,7 @@
   import { DefaultChatTransport } from 'ai';
   import type { UIMessage } from 'ai';
   import { chatStore, AVAILABLE_MODELS } from '$lib/stores/chat.svelte';
+  import { memoryStore } from '$lib/stores/memory.svelte';
   import ChatMessage from '$lib/components/chat/ChatMessage.svelte';
   import ChatInput from '$lib/components/chat/ChatInput.svelte';
   import ConversationList from '$lib/components/chat/ConversationList.svelte';
@@ -28,11 +29,29 @@
         provider: currentModel.provider,
         modelId: currentModel.modelId,
         systemPrompt: chatStore.activeConversation?.systemPrompt ?? '',
+        memoryContext: memoryStore.getRelevantContext(),
       }),
     }),
     onFinish: ({ message }) => {
       const convId = pendingConversationId;
       const modelId = pendingModelId;
+
+      for (const part of message.parts) {
+        if (
+          part.type === 'tool-invocation' &&
+          (part as any).toolInvocation?.toolName === 'saveMemory' &&
+          (part as any).toolInvocation?.state === 'result' &&
+          (part as any).toolInvocation?.result?.saved
+        ) {
+          const result = (part as any).toolInvocation.result;
+          memoryStore.add(
+            result.content,
+            convId || 'unknown',
+            result.importance ?? 3
+          );
+        }
+      }
+
       if (convId) {
         const text = getMessageText(message);
         chatStore.addMessage(convId, {

@@ -1,5 +1,6 @@
 import { tool } from 'ai';
 import { z } from 'zod';
+import { ragStore } from '$lib/server/rag';
 
 export const elysiumTools = {
   calculator: tool({
@@ -89,6 +90,31 @@ export const elysiumTools = {
       } catch (e: any) {
         return { error: e.message, url };
       }
+    },
+  }),
+
+  knowledgeSearch: tool({
+    description: 'Search through uploaded documents in the Knowledge Base for relevant information. Use when the user asks about their documents or uploaded files.',
+    parameters: z.object({
+      query: z.string().describe('Search query to find relevant document passages'),
+    }),
+    execute: async ({ query }) => {
+      const results = ragStore.search(query, 3);
+      if (results.length === 0) {
+        return { results: [], message: 'No relevant documents found. The user may need to upload files to the Knowledge Base.' };
+      }
+      return { results };
+    },
+  }),
+
+  saveMemory: tool({
+    description: 'Save an important fact or preference about the user for future conversations. Use when the user shares personal info, preferences, or important context you should remember.',
+    parameters: z.object({
+      content: z.string().describe('The fact or preference to remember'),
+      importance: z.number().min(1).max(5).describe('Importance: 1=trivial, 3=normal, 5=critical'),
+    }),
+    execute: async ({ content, importance }) => {
+      return { saved: true, content, importance, message: 'Memory saved successfully.' };
     },
   }),
 

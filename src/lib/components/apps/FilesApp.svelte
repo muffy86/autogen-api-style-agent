@@ -1,53 +1,152 @@
 <script lang="ts">
-  import { Search, LayoutGrid, List, FileText, Image, File, FolderOpen, ChevronRight } from 'lucide-svelte';
+  import { Search, LayoutGrid, List, FileText, File, Upload, Trash2, ChevronRight, X } from 'lucide-svelte';
+
+  interface UploadedFile {
+    id: string;
+    name: string;
+    size: number;
+    type: string;
+    uploadedAt: string;
+    chunkCount: number;
+  }
 
   let viewMode = $state<'grid' | 'list'>('grid');
-  let selectedFolder = $state('Documents');
   let searchQuery = $state('');
+  let files = $state<UploadedFile[]>([]);
+  let selectedFile = $state<(UploadedFile & { content?: string }) | null>(null);
+  let isUploading = $state(false);
+  let dragOver = $state(false);
+  let previewOpen = $state(false);
 
-  const folders = [
-    { name: 'Documents', count: 12 },
-    { name: 'Downloads', count: 8 },
-    { name: 'Knowledge Base', count: 24 },
-    { name: 'Uploads', count: 5 }
-  ];
+  const ALLOWED_EXTENSIONS = ['.txt', '.md', '.json', '.csv', '.js', '.ts', '.py', '.html', '.css', '.xml', '.yaml', '.yml', '.toml', '.sh', '.sql', '.svelte'];
 
-  const files = [
-    { name: 'Project Proposal.pdf', type: 'pdf', size: '2.4 MB', modified: 'Mar 15, 2026' },
-    { name: 'Architecture Notes.md', type: 'md', size: '18 KB', modified: 'Mar 14, 2026' },
-    { name: 'Meeting Summary.txt', type: 'txt', size: '4.2 KB', modified: 'Mar 13, 2026' },
-    { name: 'System Diagram.png', type: 'img', size: '1.1 MB', modified: 'Mar 12, 2026' },
-    { name: 'API Reference.pdf', type: 'pdf', size: '856 KB', modified: 'Mar 11, 2026' },
-    { name: 'Training Data.csv', type: 'txt', size: '12.3 MB', modified: 'Mar 10, 2026' },
-    { name: 'Dashboard Mock.png', type: 'img', size: '2.8 MB', modified: 'Mar 9, 2026' },
-    { name: 'Release Notes.md', type: 'md', size: '7.1 KB', modified: 'Mar 8, 2026' }
-  ];
+  async function loadFiles() {
+    try {
+      const res = await fetch('/api/files');
+      const data = await res.json();
+      files = data.files ?? [];
+    } catch {}
+  }
 
-  const iconMap = {
-    pdf: FileText,
-    md: File,
-    txt: File,
-    img: Image
-  };
+  async function uploadFile(file: globalThis.File) {
+    isUploading = true;
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await fetch('/api/files', { method: 'POST', body: formData });
+      if (res.ok) await loadFiles();
+    } catch {}
+    isUploading = false;
+  }
+
+  async function deleteFile(id: string, e?: MouseEvent) {
+    if (e) e.stopPropagation();
+    try {
+      await fetch(`/api/files/${id}`, { method: 'DELETE' });
+      if (selectedFile?.id === id) {
+        selectedFile = null;
+        previewOpen = false;
+      }
+      await loadFiles();
+    } catch {}
+  }
+
+  async function previewFile(file: UploadedFile) {
+    try {
+      const res = await fetch(`/api/files/${file.id}`);
+      const data = await res.json();
+      selectedFile = { ...file, content: data.content };
+      previewOpen = true;
+    } catch {
+      selectedFile = file;
+      previewOpen = true;
+    }
+  }
+
+  function handleDrop(e: DragEvent) {
+    e.preventDefault();
+    dragOver = false;
+    const droppedFiles = e.dataTransfer?.files;
+    if (droppedFiles) {
+      for (const file of droppedFiles) {
+        uploadFile(file);
+      }
+    }
+  }
+
+  function handleDragOver(e: DragEvent) {
+    e.preventDefault();
+    dragOver = true;
+  }
+
+  function handleDragLeave() {
+    dragOver = false;
+  }
+
+  function handleFileInput(e: Event) {
+    const input = e.target as HTMLInputElement;
+    if (input.files) {
+      for (const file of input.files) {
+        uploadFile(file);
+      }
+      input.value = '';
+    }
+  }
+
+  function formatSize(bytes: number): string {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  }
+
+  function formatDate(iso: string): string {
+    return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+
+  function getFileIcon(name: string) {
+    const ext = name.split('.').pop()?.toLowerCase();
+    if (['md', 'txt', 'csv'].includes(ext ?? '')) return FileText;
+    return File;
+  }
+
+  let filteredFiles = $derived(
+    searchQuery
+      ? files.filter(f => f.name.toLowerCase().includes(searchQuery.toLowerCase()))
+      : files
+  );
+
+  $effect(() => {
+    loadFiles();
+  });
 </script>
 
 <div class="files-layout">
   <div class="sidebar">
     <div class="sidebar-header">
-      <span class="sidebar-title">Folders</span>
+      <span class="sidebar-title">Files</span>
     </div>
-    <div class="folder-list">
-      {#each folders as folder}
-        <button
-          class="folder-item"
-          class:active={selectedFolder === folder.name}
-          onclick={() => (selectedFolder = folder.name)}
-        >
-          <FolderOpen size={14} />
-          <span>{folder.name}</span>
-          <span class="folder-count">{folder.count}</span>
-        </button>
-      {/each}
+    <div class="sidebar-info">
+      <div class="stat-row">
+        <span class="stat-label">Total Files</span>
+        <span class="stat-value">{files.length}</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Total Size</span>
+        <span class="stat-value">{formatSize(files.reduce((sum, f) => sum + f.size, 0))}</span>
+      </div>
+    </div>
+    <div class="sidebar-upload">
+      <label
+        class="upload-zone"
+        class:drag-over={dragOver}
+        ondrop={handleDrop}
+        ondragover={handleDragOver}
+        ondragleave={handleDragLeave}
+      >
+        <Upload size={18} />
+        <span>{isUploading ? 'Uploading...' : 'Drop or Browse'}</span>
+        <input type="file" accept={ALLOWED_EXTENSIONS.join(',')} multiple onchange={handleFileInput} hidden />
+      </label>
     </div>
   </div>
   <div class="main">
@@ -78,31 +177,71 @@
     <div class="breadcrumb">
       <span>Home</span>
       <ChevronRight size={12} />
-      <span class="current">{selectedFolder}</span>
+      <span class="current">Uploads</span>
+      <span class="file-total">{filteredFiles.length} files</span>
     </div>
-    <div class="file-area scrollbar-thin" class:grid-view={viewMode === 'grid'} class:list-view={viewMode === 'list'}>
-      {#each files as file}
-        {@const IconComp = iconMap[file.type as keyof typeof iconMap] ?? File}
-        {#if viewMode === 'grid'}
-          <button class="file-card">
-            <div class="file-icon">
-              <IconComp size={24} strokeWidth={1.5} />
-            </div>
-            <span class="file-name">{file.name}</span>
-            <span class="file-size">{file.size}</span>
+
+    {#if previewOpen && selectedFile}
+      <div class="preview-panel">
+        <div class="preview-bar">
+          <span class="preview-filename">{selectedFile.name}</span>
+          <button class="preview-close" onclick={() => (previewOpen = false)}>
+            <X size={14} />
           </button>
+        </div>
+        <pre class="preview-content scrollbar-thin">{selectedFile.content ?? 'Loading...'}</pre>
+      </div>
+    {:else}
+      <div class="file-area scrollbar-thin" class:grid-view={viewMode === 'grid'} class:list-view={viewMode === 'list'}>
+        {#if filteredFiles.length === 0}
+          <!-- svelte-ignore a11y_no_static_element_interactions -->
+          <div
+            class="empty-state"
+            class:drag-over={dragOver}
+            ondrop={handleDrop}
+            ondragover={handleDragOver}
+            ondragleave={handleDragLeave}
+          >
+            <Upload size={32} strokeWidth={1} />
+            <p>{files.length === 0 ? 'No files uploaded yet. Drop files here or use the upload button.' : 'No files match your search.'}</p>
+          </div>
         {:else}
-          <button class="file-row">
-            <div class="file-row-icon">
-              <IconComp size={16} strokeWidth={1.5} />
-            </div>
-            <span class="file-row-name">{file.name}</span>
-            <span class="file-row-size">{file.size}</span>
-            <span class="file-row-date">{file.modified}</span>
-          </button>
+          {#each filteredFiles as file}
+            {@const IconComp = getFileIcon(file.name)}
+            {#if viewMode === 'grid'}
+              <!-- svelte-ignore a11y_no_static_element_interactions -->
+              <!-- svelte-ignore a11y_click_events_have_key_events -->
+              <div class="file-card" onclick={() => previewFile(file)}>
+                <div class="file-icon">
+                  <IconComp size={24} strokeWidth={1.5} />
+                </div>
+                <span class="file-name">{file.name}</span>
+                <span class="file-size">{formatSize(file.size)}</span>
+                <div class="file-actions">
+                  <button class="action-btn" onclick={(e) => { e.stopPropagation(); deleteFile(file.id); }} aria-label="Delete">
+                    <Trash2 size={12} />
+                  </button>
+                </div>
+              </div>
+            {:else}
+              <!-- svelte-ignore a11y_no_static_element_interactions -->
+              <!-- svelte-ignore a11y_click_events_have_key_events -->
+              <div class="file-row" onclick={() => previewFile(file)}>
+                <div class="file-row-icon">
+                  <IconComp size={16} strokeWidth={1.5} />
+                </div>
+                <span class="file-row-name">{file.name}</span>
+                <span class="file-row-size">{formatSize(file.size)}</span>
+                <span class="file-row-date">{formatDate(file.uploadedAt)}</span>
+                <button class="action-btn" onclick={(e) => { e.stopPropagation(); deleteFile(file.id); }} aria-label="Delete">
+                  <Trash2 size={12} />
+                </button>
+              </div>
+            {/if}
+          {/each}
         {/if}
-      {/each}
-    </div>
+      </div>
+    {/if}
   </div>
 </div>
 
@@ -116,6 +255,8 @@
     width: 200px;
     border-right: 1px solid var(--border-subtle);
     flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
   }
 
   .sidebar-header {
@@ -131,40 +272,54 @@
     color: var(--text-muted);
   }
 
-  .folder-list {
-    padding: 4px;
+  .sidebar-info {
+    padding: 12px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
   }
 
-  .folder-item {
+  .stat-row {
     display: flex;
-    align-items: center;
-    gap: 8px;
-    width: 100%;
+    justify-content: space-between;
+    font-size: 12px;
+  }
+
+  .stat-label {
+    color: var(--text-muted);
+  }
+
+  .stat-value {
+    color: var(--text-primary);
+    font-weight: 500;
+  }
+
+  .sidebar-upload {
     padding: 8px 12px;
-    border: none;
-    background: transparent;
+    margin-top: auto;
+    border-top: 1px solid var(--border-subtle);
+  }
+
+  .upload-zone {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 16px;
+    border: 2px dashed var(--border-subtle);
     border-radius: var(--radius-sm);
     cursor: pointer;
-    font-size: 13px;
-    color: var(--text-secondary);
-    transition: all var(--transition-fast);
-    text-align: left;
-  }
-
-  .folder-item:hover {
-    background: var(--bg-surface-hover);
-    color: var(--text-primary);
-  }
-
-  .folder-item.active {
-    background: var(--accent-subtle);
-    color: var(--accent-glow);
-  }
-
-  .folder-count {
-    margin-left: auto;
-    font-size: 11px;
     color: var(--text-muted);
+    font-size: 12px;
+    transition: all var(--transition-fast);
+    text-align: center;
+  }
+
+  .upload-zone:hover,
+  .upload-zone.drag-over {
+    border-color: var(--accent);
+    color: var(--accent-glow);
+    background: var(--accent-subtle);
   }
 
   .main {
@@ -252,6 +407,12 @@
     color: var(--text-primary);
   }
 
+  .file-total {
+    margin-left: auto;
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+
   .file-area {
     flex: 1;
     overflow-y: auto;
@@ -271,7 +432,30 @@
     gap: 2px;
   }
 
+  .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    height: 100%;
+    color: var(--text-muted);
+    text-align: center;
+    font-size: 13px;
+    border: 2px dashed transparent;
+    border-radius: var(--radius-lg);
+    padding: 40px;
+    transition: all var(--transition-fast);
+    grid-column: 1 / -1;
+  }
+
+  .empty-state.drag-over {
+    border-color: var(--accent);
+    background: var(--accent-subtle);
+  }
+
   .file-card {
+    position: relative;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -304,8 +488,10 @@
   .file-name {
     font-size: 11px;
     color: var(--text-primary);
-    word-break: break-all;
-    line-height: 1.3;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    width: 100%;
   }
 
   .file-size {
@@ -313,17 +499,48 @@
     color: var(--text-muted);
   }
 
+  .file-actions {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    opacity: 0;
+    transition: opacity var(--transition-fast);
+  }
+
+  .file-card:hover .file-actions {
+    opacity: 1;
+  }
+
+  .action-btn {
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    background: rgba(0, 0, 0, 0.5);
+    color: var(--text-muted);
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all var(--transition-fast);
+  }
+
+  .action-btn:hover {
+    color: #f43f5e;
+    background: rgba(244, 63, 94, 0.15);
+  }
+
   .file-row {
     display: flex;
     align-items: center;
     gap: 10px;
+    width: 100%;
     padding: 8px 12px;
-    border-radius: var(--radius-sm);
     border: none;
     background: transparent;
+    border-radius: var(--radius-sm);
     cursor: pointer;
-    transition: background var(--transition-fast);
-    width: 100%;
+    transition: all var(--transition-fast);
     text-align: left;
   }
 
@@ -332,15 +549,19 @@
   }
 
   .file-row-icon {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     color: var(--accent-glow);
     flex-shrink: 0;
   }
 
   .file-row-name {
+    flex: 1;
     font-size: 13px;
     color: var(--text-primary);
-    flex: 1;
-    min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -360,5 +581,65 @@
     width: 100px;
     text-align: right;
     flex-shrink: 0;
+  }
+
+  .file-row .action-btn {
+    opacity: 0;
+    flex-shrink: 0;
+  }
+
+  .file-row:hover .action-btn {
+    opacity: 1;
+  }
+
+  .preview-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .preview-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 16px;
+    border-bottom: 1px solid var(--border-subtle);
+    background: var(--bg-surface);
+  }
+
+  .preview-filename {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-primary);
+  }
+
+  .preview-close {
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    display: flex;
+    transition: all var(--transition-fast);
+  }
+
+  .preview-close:hover {
+    background: var(--bg-surface-hover);
+    color: var(--text-primary);
+  }
+
+  .preview-content {
+    flex: 1;
+    margin: 0;
+    padding: 16px;
+    font-family: 'SF Mono', 'Fira Code', 'JetBrains Mono', monospace;
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--text-secondary);
+    white-space: pre-wrap;
+    word-break: break-word;
+    overflow-y: auto;
   }
 </style>
