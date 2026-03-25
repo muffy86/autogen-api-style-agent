@@ -26,7 +26,7 @@ from .models import (
 from .providers import ModelClientFactory
 from .session import SessionManager
 from .teams import create_team
-from .utils import extract_final_response, extract_message_text
+from .utils import extract_final_response, extract_message_text, format_task
 from .webhooks import router as webhook_router
 
 logger = logging.getLogger(__name__)
@@ -116,29 +116,32 @@ async def chat_completions(request: ChatCompletionRequest):
 
     session = await sessions.get_or_create(request.session_id)
 
+    task = format_task(request.messages)
     user_msg = request.messages[-1].content if request.messages else ""
     session.add_message("user", user_msg)
 
     try:
         provider = None
+        model = None
         if request.model and request.model != "auto" and "/" in request.model:
-            provider = request.model.split("/", 1)[0]
+            provider, model = request.model.split("/", 1)
         team_obj = create_team(
             team_name=request.team,
             factory=factory,
             provider=provider,
+            model=model,
         )
     except Exception as exc:
         raise HTTPException(status_code=400, detail=f"Team creation failed: {exc}") from exc
 
     if request.stream:
         return EventSourceResponse(
-            _stream_response(team_obj, user_msg, request.model, session),
+            _stream_response(team_obj, task, request.model, session),
             media_type="text/event-stream",
         )
 
     try:
-        result = await team_obj.run(task=user_msg)
+        result = await team_obj.run(task=task)
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Agent execution failed: {exc}") from exc
 

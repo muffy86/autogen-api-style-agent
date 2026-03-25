@@ -1,7 +1,10 @@
 """Shared utilities for extracting responses from AutoGen message types."""
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from .models import ChatMessage
 
 
 def extract_final_response(result: Any) -> str:
@@ -61,3 +64,19 @@ def extract_message_text(message: Any) -> str:
         if combined and combined != "TERMINATE":
             return combined
     return ""
+
+
+def format_task(messages: list[ChatMessage]) -> str:
+    """Format an OpenAI-style messages array into a single task string.
+
+    Preserves the full conversation context so the agent team sees all
+    prior turns, not just the last user message.
+    """
+    if not messages:
+        return ""
+    if len(messages) == 1:
+        return messages[0].content
+    parts: list[str] = []
+    for msg in messages:
+        parts.append(f"[{msg.role}]: {msg.content}")
+    return "\n\n".join(parts)

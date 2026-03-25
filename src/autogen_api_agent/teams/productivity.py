@@ -48,11 +48,12 @@ Read the conversation and select the most appropriate next agent.\
 def create_productivity_team(
     factory: ModelClientFactory,
     provider: str | None = None,
+    model: str | None = None,
     config: AppConfig | None = None,
 ):
     """Create the full 8-agent productivity team using SelectorGroupChat."""
     config = config or get_config()
-    client = factory.create(provider)
+    client = factory.create(provider, model)
 
     orchestrator = create_orchestrator(client)
     coder = create_coder(client)

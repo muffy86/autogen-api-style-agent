@@ -7,6 +7,7 @@ import logging
 import os
 import uuid
 
+import httpx
 from fastapi import APIRouter, BackgroundTasks, Header, HTTPException, Request
 
 from .config import get_config
@@ -19,6 +20,8 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/webhooks", tags=["webhooks"])
 
 _webhook_jobs: dict[str, dict] = {}
+
+_MAX_DIFF_SIZE = 50_000
 
 
 def _verify_signature(body: bytes, signature: str | None) -> None:
@@ -35,11 +38,35 @@ def _verify_signature(body: bytes, signature: str | None) -> None:
         raise HTTPException(status_code=401, detail="Invalid signature")
 
 
+async def _fetch_diff(url: str) -> str:
+    """Fetch diff content from a GitHub diff URL."""
+    if not url:
+        return ""
+    try:
+        async with httpx.AsyncClient(timeout=15) as client:
+            resp = await client.get(url, headers={"Accept": "application/vnd.github.v3.diff"})
+            resp.raise_for_status()
+            diff = resp.text
+            if len(diff) > _MAX_DIFF_SIZE:
+                return diff[:_MAX_DIFF_SIZE] + "\n\n... [diff truncated]"
+            return diff
+    except Exception:
+        logger.warning("Failed to fetch diff from %s", url, exc_info=True)
+        return "(diff could not be fetched)"
+
+
 async def _run_webhook_agent(
-    job_id: str, team_name: str, factory: ModelClientFactory, prompt: str
+    job_id: str,
+    team_name: str,
+    factory: ModelClientFactory,
+    prompt: str,
+    diff_url: str | None = None,
 ) -> None:
     """Background task for webhook agent execution."""
     try:
+        if diff_url:
+            diff_content = await _fetch_diff(diff_url)
+            prompt = f"{prompt}\n\nDiff:\n```diff\n{diff_content}\n```"
         team_obj = create_team(team_name, factory)
         result = await team_obj.run(task=prompt)
         _webhook_jobs[job_id] = {
@@ -79,6 +106,7 @@ async def github_webhook(
 
     team_name: str | None = None
     prompt: str | None = None
+    diff_url: str | None = None
 
     if event == "pull_request" and payload.get("action") in (
         "opened",
@@ -91,8 +119,7 @@ async def github_webhook(
         prompt = (
             f"Review this pull request:\n"
             f"Title: {title}\n"
-            f"Description: {body_text}\n"
-            f"Diff URL: {diff_url}"
+            f"Description: {body_text}"
         )
         team_name = "code_review"
 
@@ -119,7 +146,9 @@ async def github_webhook(
     if team_name and prompt:
         job_id = uuid.uuid4().hex
         _webhook_jobs[job_id] = {"status": "running"}
-        background_tasks.add_task(_run_webhook_agent, job_id, team_name, factory, prompt)
+        background_tasks.add_task(
+            _run_webhook_agent, job_id, team_name, factory, prompt, diff_url
+        )
         return {"status": "accepted", "job_id": job_id}
 
     return {"status": "ignored", "event": event}

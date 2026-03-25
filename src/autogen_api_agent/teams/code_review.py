@@ -13,6 +13,7 @@ from ..providers.factory import ModelClientFactory
 def create_code_review_team(
     factory: ModelClientFactory,
     provider: str | None = None,
+    model: str | None = None,
     config: AppConfig | None = None,
 ):
     """Create a focused 3-agent code review team.
@@ -22,7 +23,7 @@ def create_code_review_team(
     evaluates structural/design concerns.
     """
     config = config or get_config()
-    client = factory.create(provider)
+    client = factory.create(provider, model)
 
     coder = create_coder(client)
     reviewer = create_reviewer(client)

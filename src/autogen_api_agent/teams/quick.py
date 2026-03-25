@@ -35,14 +35,14 @@ Rules:
 def create_quick_agent(
     factory: ModelClientFactory,
     provider: str | None = None,
+    model: str | None = None,
     config: AppConfig | None = None,
 ) -> AssistantAgent:
     """Create a single all-purpose agent for quick tasks."""
     config = config or get_config()
-    client = factory.create(provider)
+    client = factory.create(provider, model)
 
     all_tools = get_tools(
-        "file_ops", "web_search", "github", "shell", "code_analysis"
     )
 
     return AssistantAgent(

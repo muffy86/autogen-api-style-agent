@@ -18,6 +18,7 @@ def create_team(
     team_name: str = "productivity",
     factory=None,
     provider: str | None = None,
+    model: str | None = None,
     config=None,
 ):
     """Dispatch to the appropriate team creation function by name."""
@@ -29,6 +30,8 @@ def create_team(
     kwargs: dict = {"factory": factory}
     if provider is not None:
         kwargs["provider"] = provider
+    if model is not None:
+        kwargs["model"] = model
     if config is not None:
         kwargs["config"] = config
     return creator(**kwargs)

@@ -14,7 +14,7 @@ from .models import (
 from .providers.factory import ModelClientFactory
 from .server import app, create_app
 from .session import Session, SessionManager
-from .utils import extract_final_response, extract_message_text
+from .utils import extract_final_response, extract_message_text, format_task
 
 __all__ = [
     "__version__",
@@ -35,4 +35,5 @@ __all__ = [
     "run_mcp_stdio",
     "extract_final_response",
     "extract_message_text",
+    "format_task",
 ]

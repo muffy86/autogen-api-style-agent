@@ -13,6 +13,7 @@ from ..providers.factory import ModelClientFactory
 def create_research_team(
     factory: ModelClientFactory,
     provider: str | None = None,
+    model: str | None = None,
     config: AppConfig | None = None,
 ):
     """Create a 3-agent research + summary team.
@@ -22,7 +23,7 @@ def create_research_team(
     and the architect provides structural feedback.
     """
     config = config or get_config()
-    client = factory.create(provider)
+    client = factory.create(provider, model)
 
     researcher = create_researcher(client)
     writer = create_writer(client)
