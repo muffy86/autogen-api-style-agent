@@ -14,7 +14,7 @@ export const AVAILABLE_MODELS: AIModel[] = [
 const STORAGE_KEY_MODEL = 'elysium-selected-model';
 
 function generateId(): string {
-  return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+  return crypto.randomUUID();
 }
 
 class ChatStore {
