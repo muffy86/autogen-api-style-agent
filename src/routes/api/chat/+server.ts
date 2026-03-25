@@ -79,8 +79,8 @@ export const POST: RequestHandler = async ({ request, locals }) => {
     let enhancedSystemPrompt = systemPrompt || 'You are Elysium, a helpful AI assistant running inside Elysium AI OS.';
 
     const lastUserMessage = messages.filter((m: any) => m.role === 'user').pop()?.content?.toLowerCase() || '';
-    const githubKeywords = ['github', 'repo', 'repository', 'issue', 'pull request', 'pr', 'commit', 'branch'];
-    const isGitHubQuery = githubKeywords.some(kw => lastUserMessage.includes(kw));
+    const githubKeywordPattern = /\b(?:github|repos?|repository|repositories|issues?|pull\s+requests?|PRs?|commits?|branches)\b/i;
+    const isGitHubQuery = githubKeywordPattern.test(lastUserMessage);
 
     if (isGitHubQuery) {
       const { data: ghIntegration } = await locals.supabase

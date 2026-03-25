@@ -53,6 +53,14 @@ export const GET: RequestHandler = async ({ locals, url }) => {
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (err: any) {
+    if (err.status === 401) {
+      await locals.supabase.from('integrations').delete()
+        .eq('user_id', locals.user.id).eq('provider', 'github');
+      return new Response(JSON.stringify({ error: 'GitHub token expired. Please reconnect.', needsAuth: true }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
     return new Response(JSON.stringify({ error: 'Failed to fetch issues' }), { status: 500 });
   }
 };
