@@ -63,8 +63,6 @@ class RAGStore {
   search(query: string, topK = 3): { content: string; fileName: string; score: number }[] {
     if (this.chunks.length === 0) return [];
 
-    this.addToVocabulary(query);
-    this.computeIdf();
     const queryVector = this.computeTfIdf(query);
 
     const scored = this.chunks.map(chunk => ({
