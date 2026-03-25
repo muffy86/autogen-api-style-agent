@@ -1,5 +1,37 @@
 import { tool } from 'ai';
 import { z } from 'zod';
+import { lookup } from 'node:dns/promises';
+
+const PRIVATE_V4_PATTERNS = [
+  /^127\./,
+  /^10\./,
+  /^172\.(1[6-9]|2\d|3[01])\./,
+  /^192\.168\./,
+  /^169\.254\./,
+  /^0\./,
+];
+
+function isPrivateIp(ip: string): boolean {
+  if (PRIVATE_V4_PATTERNS.some(p => p.test(ip))) return true;
+
+  const lower = ip.toLowerCase();
+  if (lower === '::1') return true;
+  if (lower.startsWith('fc') || lower.startsWith('fd')) return true;
+  if (lower.startsWith('fe80:')) return true;
+
+  const dottedMatch = lower.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/);
+  if (dottedMatch) return PRIVATE_V4_PATTERNS.some(p => p.test(dottedMatch[1]));
+
+  const hexMatch = lower.match(/^::ffff:([0-9a-f]{1,4}):([0-9a-f]{1,4})$/);
+  if (hexMatch) {
+    const hi = parseInt(hexMatch[1], 16);
+    const lo = parseInt(hexMatch[2], 16);
+    const v4 = `${(hi >> 8) & 0xff}.${hi & 0xff}.${(lo >> 8) & 0xff}.${lo & 0xff}`;
+    return PRIVATE_V4_PATTERNS.some(p => p.test(v4));
+  }
+
+  return false;
+}
 
 export const elysiumTools = {
   calculator: tool({
@@ -73,31 +105,19 @@ export const elysiumTools = {
     execute: async ({ url: targetUrl }) => {
       try {
         const parsed = new URL(targetUrl);
+        if (parsed.protocol === 'file:') {
+          return { error: 'Access to internal/private URLs is not allowed', url: targetUrl };
+        }
+
         const hostname = parsed.hostname.toLowerCase();
-        const blockedPatterns = [
-          /^localhost$/,
-          /^127\./,
-          /^10\./,
-          /^172\.(1[6-9]|2\d|3[01])\./,
-          /^192\.168\./,
-          /^169\.254\./,
-          /^0\./,
-          /^\[::1\]$/,
-          /^\[fc/,
-          /^\[fd/,
-          /^\[::ffff:/,
-        ];
-        const mappedV4Match = hostname.match(/^\[::ffff:(\d+\.\d+\.\d+\.\d+)\]$/);
-        const mappedV4 = mappedV4Match ? mappedV4Match[1] : null;
-        const isBlockedMappedV4 = mappedV4 != null && [
-          /^127\./,
-          /^10\./,
-          /^172\.(1[6-9]|2\d|3[01])\./,
-          /^192\.168\./,
-          /^169\.254\./,
-          /^0\./,
-        ].some(p => p.test(mappedV4));
-        if (blockedPatterns.some(p => p.test(hostname)) || isBlockedMappedV4 || parsed.protocol === 'file:') {
+        const bare = hostname.replace(/^\[|\]$/g, '');
+
+        if (bare === 'localhost' || isPrivateIp(bare)) {
+          return { error: 'Access to internal/private URLs is not allowed', url: targetUrl };
+        }
+
+        const { address } = await lookup(bare);
+        if (isPrivateIp(address)) {
           return { error: 'Access to internal/private URLs is not allowed', url: targetUrl };
         }
 
