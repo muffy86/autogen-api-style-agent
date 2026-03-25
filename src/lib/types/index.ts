@@ -91,6 +91,7 @@ export interface Notification {
   icon?: any;
   duration?: number;
   action?: { label: string; onClick: () => void };
+  timerId?: ReturnType<typeof setTimeout>;
   createdAt: Date;
 }
 

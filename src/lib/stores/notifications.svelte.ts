@@ -2,55 +2,55 @@ import type { Notification } from '$lib/types';
 
 class NotificationStore {
   notifications = $state<Notification[]>([]);
-  private timers = new Map<string, ReturnType<typeof setTimeout>>();
 
-  push(notif: Omit<Notification, 'id' | 'createdAt'>): string {
+  push(notif: Omit<Notification, 'id' | 'createdAt' | 'timerId'>): string {
     const id = `notif-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    const duration = notif.duration ?? 5000;
+
     const full: Notification = {
       ...notif,
       id,
-      duration: notif.duration ?? 5000,
+      duration,
       createdAt: new Date()
     };
+
+    if (duration > 0) {
+      full.timerId = setTimeout(() => {
+        this.dismiss(id);
+      }, duration);
+    }
 
     const combined = [full, ...this.notifications];
     const kept = combined.slice(0, 5);
     const evicted = combined.slice(5);
 
     for (const n of evicted) {
-      const timer = this.timers.get(n.id);
-      if (timer) {
-        clearTimeout(timer);
-        this.timers.delete(n.id);
+      if (n.timerId) {
+        clearTimeout(n.timerId);
+        n.timerId = undefined;
       }
     }
 
     this.notifications = kept;
-
-    if (full.duration && full.duration > 0) {
-      const timer = setTimeout(() => {
-        this.dismiss(id);
-      }, full.duration);
-      this.timers.set(id, timer);
-    }
-
     return id;
   }
 
   dismiss(id: string): void {
-    const timer = this.timers.get(id);
-    if (timer) {
-      clearTimeout(timer);
-      this.timers.delete(id);
+    const notif = this.notifications.find((n) => n.id === id);
+    if (notif?.timerId) {
+      clearTimeout(notif.timerId);
+      notif.timerId = undefined;
     }
     this.notifications = this.notifications.filter((n) => n.id !== id);
   }
 
   clear(): void {
-    for (const timer of this.timers.values()) {
-      clearTimeout(timer);
+    for (const n of this.notifications) {
+      if (n.timerId) {
+        clearTimeout(n.timerId);
+        n.timerId = undefined;
+      }
     }
-    this.timers.clear();
     this.notifications = [];
   }
 }

@@ -7,17 +7,35 @@ class ContextMenuStore {
   items = $state<ContextMenuItem[]>([]);
 
   open(x: number, y: number, items: ContextMenuItem[]): void {
-    const menuWidth = 220;
-    const separators = items.filter((i) => i.separator).length;
-    const menuHeight = (items.length - separators) * 36 + separators * 9 + 10;
-    const vw = typeof window !== 'undefined' ? window.innerWidth : 1920;
-    const vh = typeof window !== 'undefined' ? window.innerHeight : 1080;
-    const margin = 8;
+    if (typeof window === 'undefined') return;
 
-    let posX = x + menuWidth > vw - margin ? x - menuWidth : x;
-    let posY = y + menuHeight > vh - margin ? y - menuHeight : y;
-    this.x = Math.max(margin, Math.min(posX, vw - menuWidth - margin));
-    this.y = Math.max(margin, Math.min(posY, vh - menuHeight - margin));
+    const menuWidth = 220;
+    const padding = 8;
+    const separatorCount = items.filter((i) => i.separator).length;
+    const menuHeight = (items.length - separatorCount) * 36 + separatorCount * 9 + 10;
+
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+
+    let posX = x;
+    let posY = y;
+
+    if (posX + menuWidth > viewportWidth - padding) {
+      posX = viewportWidth - menuWidth - padding;
+    }
+    if (posX < padding) {
+      posX = padding;
+    }
+
+    if (posY + menuHeight > viewportHeight - padding) {
+      posY = viewportHeight - menuHeight - padding;
+    }
+    if (posY < padding) {
+      posY = padding;
+    }
+
+    this.x = posX;
+    this.y = posY;
     this.items = items;
     this.visible = true;
   }
