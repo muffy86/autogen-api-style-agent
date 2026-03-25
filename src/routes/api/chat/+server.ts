@@ -7,6 +7,14 @@ import { streamText } from 'ai';
 import { env } from '$env/dynamic/private';
 import type { RequestHandler } from './$types';
 
+interface AttachmentPayload {
+  name: string;
+  type: string;
+  mimeType: string;
+  content?: string;
+  dataUrl?: string;
+}
+
 function getModel(provider: string, modelId: string) {
   switch (provider) {
     case 'openai': {
@@ -39,32 +47,68 @@ function getModel(provider: string, modelId: string) {
   }
 }
 
-function buildFileContextPrompt(
-  fileContext: Array<{ name: string; type: string; mimeType: string; content?: string }> | undefined
-): string {
-  if (!fileContext?.length) return '';
+function buildTextFilePrompt(attachments: AttachmentPayload[]): string {
+  const textFiles = attachments.filter(a => a.content);
+  const otherFiles = attachments.filter(a => !a.content && !a.dataUrl);
+  if (textFiles.length === 0 && otherFiles.length === 0) return '';
 
-  const parts = fileContext.map(f => {
-    if (f.content) {
-      return `[File: ${f.name}]\n\`\`\`\n${f.content}\n\`\`\``;
+  const parts: string[] = [];
+  for (const f of textFiles) {
+    parts.push(`[File: ${f.name}]\n\`\`\`\n${f.content}\n\`\`\``);
+  }
+  for (const f of otherFiles) {
+    parts.push(`[Attached: ${f.name} (${f.mimeType})]`);
+  }
+  return '\n\nThe user has attached the following files:\n' + parts.join('\n\n');
+}
+
+function injectImageAttachments(messages: any[], attachments: AttachmentPayload[]): any[] {
+  const imageAtts = attachments.filter(a => a.dataUrl && a.mimeType.startsWith('image/'));
+  if (imageAtts.length === 0) return messages;
+
+  let lastUserIdx = -1;
+  for (let i = messages.length - 1; i >= 0; i--) {
+    if (messages[i].role === 'user') {
+      lastUserIdx = i;
+      break;
     }
-    return `[Attached: ${f.name} (${f.mimeType})]`;
+  }
+  if (lastUserIdx === -1) return messages;
+
+  const result = messages.map((msg, i) => {
+    if (i !== lastUserIdx) return msg;
+
+    const existingContent = msg.content;
+    const contentParts: any[] = [];
+
+    if (typeof existingContent === 'string') {
+      contentParts.push({ type: 'text', text: existingContent });
+    } else if (Array.isArray(existingContent)) {
+      contentParts.push(...existingContent);
+    }
+
+    for (const img of imageAtts) {
+      contentParts.push({ type: 'image', image: img.dataUrl });
+    }
+
+    return { ...msg, content: contentParts };
   });
 
-  return '\n\nThe user has attached the following files:\n' + parts.join('\n\n');
+  return result;
 }
 
 export const POST: RequestHandler = async ({ request }) => {
   try {
-    const { messages, provider, modelId, systemPrompt, fileContext } = await request.json();
+    const { messages, provider, modelId, systemPrompt, attachments } = await request.json();
     const model = getModel(provider, modelId);
 
     const basePrompt = systemPrompt || 'You are Elysium, a helpful AI assistant running inside Elysium AI OS.';
-    const filePrompt = buildFileContextPrompt(fileContext);
+    const filePrompt = attachments?.length ? buildTextFilePrompt(attachments) : '';
+    const processedMessages = attachments?.length ? injectImageAttachments(messages, attachments) : messages;
 
     const result = streamText({
       model,
-      messages,
+      messages: processedMessages,
       system: basePrompt + filePrompt,
       maxOutputTokens: 4096,
     });

@@ -26,7 +26,7 @@
   let searchOverridePrompt = $state<string | null>(null);
   let pendingSearchResults = $state<WebSearchResult[] | null>(null);
   let pendingToolCalls = $state<{ id: string; name: string; status: 'running' | 'completed' | 'error'; input?: Record<string, unknown>; output?: string; duration?: number }[] | null>(null);
-  let pendingFileContext = $state<Array<{ name: string; type: string; mimeType: string; content?: string }> | null>(null);
+  let pendingAttachmentsPayload = $state<Array<{ name: string; type: string; mimeType: string; content?: string; dataUrl?: string }> | null>(null);
 
   let currentModel = $derived(
     AVAILABLE_MODELS.find(m => m.id === chatStore.selectedModel) ?? AVAILABLE_MODELS[0]
@@ -39,7 +39,7 @@
         provider: currentModel.provider,
         modelId: currentModel.modelId,
         systemPrompt: searchOverridePrompt ?? chatStore.activeConversation?.systemPrompt ?? '',
-        ...(pendingFileContext ? { fileContext: pendingFileContext } : {}),
+        ...(pendingAttachmentsPayload ? { attachments: pendingAttachmentsPayload } : {}),
       }),
     }),
     onFinish: ({ message }) => {
@@ -67,14 +67,14 @@
       pendingConversationId = null;
       pendingModelId = null;
       searchOverridePrompt = null;
-      pendingFileContext = null;
+      pendingAttachmentsPayload = null;
     },
     onError: (err) => {
       errorMessage = err.message || 'Something went wrong';
       searchOverridePrompt = null;
       pendingSearchResults = null;
       pendingToolCalls = null;
-      pendingFileContext = null;
+      pendingAttachmentsPayload = null;
     },
   });
 
@@ -206,28 +206,22 @@
     const currentRawAttachments = [...attachments];
     attachments = [];
 
-    const imageFiles: Array<{ type: 'file'; mediaType: string; url: string; filename?: string }> = [];
-    const fileContextPayload: Array<{ name: string; type: string; mimeType: string; content?: string }> = [];
+    const attachmentsForApi: Array<{ name: string; type: string; mimeType: string; content?: string; dataUrl?: string }> = [];
 
     for (const att of currentRawAttachments) {
       if (att.type === 'image' && att.dataUrl) {
-        imageFiles.push({
-          type: 'file',
-          mediaType: att.mimeType,
-          url: att.dataUrl,
-          filename: att.name,
-        });
+        attachmentsForApi.push({ name: att.name, type: att.type, mimeType: att.mimeType, dataUrl: att.dataUrl });
       } else if (att.type === 'code' || att.mimeType.startsWith('text/') || att.mimeType === 'application/json') {
         try {
           const content = await att.file.text();
-          fileContextPayload.push({ name: att.name, type: att.type, mimeType: att.mimeType, content });
+          attachmentsForApi.push({ name: att.name, type: att.type, mimeType: att.mimeType, content });
         } catch {}
       } else {
-        fileContextPayload.push({ name: att.name, type: att.type, mimeType: att.mimeType });
+        attachmentsForApi.push({ name: att.name, type: att.type, mimeType: att.mimeType });
       }
     }
 
-    pendingFileContext = fileContextPayload.length > 0 ? fileContextPayload : null;
+    pendingAttachmentsPayload = attachmentsForApi.length > 0 ? attachmentsForApi : null;
 
     const displayText = text || (currentAttachments.length > 0 ? '(see attached files)' : '');
 
@@ -245,10 +239,7 @@
     pendingModelId = chatStore.selectedModel;
     errorMessage = null;
 
-    const sendPayload: { text: string; files?: Array<{ type: 'file'; mediaType: string; url: string; filename?: string }> } = { text: displayText };
-    if (imageFiles.length > 0) {
-      sendPayload.files = imageFiles;
-    }
+    const sendPayload = { text: displayText };
 
     if (searchMode) {
       const searchToolId = `tool-search-${Date.now()}`;
