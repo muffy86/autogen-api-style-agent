@@ -37,13 +37,11 @@ function computeAccentConfig(hex: string): AccentConfig {
 class ThemeStore {
   theme = $state<Theme>('dark');
   accentColor = $state('#8b5cf6');
+  private osPrefersDark = $state(true);
 
   get resolved(): 'dark' | 'light' {
     if (this.theme === 'system') {
-      return typeof window !== 'undefined' &&
-        window.matchMedia('(prefers-color-scheme: light)').matches
-        ? 'light'
-        : 'dark';
+      return this.osPrefersDark ? 'dark' : 'light';
     }
     return this.theme;
   }
@@ -55,11 +53,10 @@ class ThemeStore {
       const savedAccent = localStorage.getItem('elysium-accent');
       if (savedAccent) this.accentColor = savedAccent;
 
-      const mql = window.matchMedia('(prefers-color-scheme: light)');
-      mql.addEventListener('change', () => {
-        if (this.theme === 'system') {
-          this.theme = 'system';
-        }
+      const mql = window.matchMedia('(prefers-color-scheme: dark)');
+      this.osPrefersDark = mql.matches;
+      mql.addEventListener('change', (e) => {
+        this.osPrefersDark = e.matches;
       });
     }
   }
