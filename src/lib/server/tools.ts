@@ -1,6 +1,7 @@
 import { tool } from 'ai';
 import { z } from 'zod';
 import { lookup } from 'node:dns/promises';
+import { evaluate } from 'mathjs';
 
 const PRIVATE_V4_PATTERNS = [
   /^127\./,
@@ -11,24 +12,42 @@ const PRIVATE_V4_PATTERNS = [
   /^0\./,
 ];
 
+function extractMappedV4(ip: string): string | null {
+  const dotted = ip.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/);
+  if (dotted) return dotted[1];
+
+  const hex = ip.match(/^::ffff:([0-9a-f]{1,4}):([0-9a-f]{1,4})$/);
+  if (hex) {
+    const hi = parseInt(hex[1], 16);
+    const lo = parseInt(hex[2], 16);
+    return `${(hi >> 8) & 0xff}.${hi & 0xff}.${(lo >> 8) & 0xff}.${lo & 0xff}`;
+  }
+
+  const full = ip.match(/^0{0,4}:0{0,4}:0{0,4}:0{0,4}:0{0,4}:ffff:([0-9a-f]{1,4}):([0-9a-f]{1,4})$/);
+  if (full) {
+    const hi = parseInt(full[1], 16);
+    const lo = parseInt(full[2], 16);
+    return `${(hi >> 8) & 0xff}.${hi & 0xff}.${(lo >> 8) & 0xff}.${lo & 0xff}`;
+  }
+
+  const fullDotted = ip.match(/^0{0,4}:0{0,4}:0{0,4}:0{0,4}:0{0,4}:ffff:(\d+\.\d+\.\d+\.\d+)$/);
+  if (fullDotted) return fullDotted[1];
+
+  return null;
+}
+
 function isPrivateIp(ip: string): boolean {
   if (PRIVATE_V4_PATTERNS.some(p => p.test(ip))) return true;
 
   const lower = ip.toLowerCase();
-  if (lower === '::1') return true;
+
+  if (lower === '::1' || lower === '0000:0000:0000:0000:0000:0000:0000:0001') return true;
   if (lower.startsWith('fc') || lower.startsWith('fd')) return true;
-  if (lower.startsWith('fe80:')) return true;
+  if (lower.startsWith('fe80')) return true;
+  if (/^::$/.test(lower) || lower === '0.0.0.0') return true;
 
-  const dottedMatch = lower.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/);
-  if (dottedMatch) return PRIVATE_V4_PATTERNS.some(p => p.test(dottedMatch[1]));
-
-  const hexMatch = lower.match(/^::ffff:([0-9a-f]{1,4}):([0-9a-f]{1,4})$/);
-  if (hexMatch) {
-    const hi = parseInt(hexMatch[1], 16);
-    const lo = parseInt(hexMatch[2], 16);
-    const v4 = `${(hi >> 8) & 0xff}.${hi & 0xff}.${(lo >> 8) & 0xff}.${lo & 0xff}`;
-    return PRIVATE_V4_PATTERNS.some(p => p.test(v4));
-  }
+  const v4 = extractMappedV4(lower);
+  if (v4 !== null) return PRIVATE_V4_PATTERNS.some(p => p.test(v4));
 
   return false;
 }
@@ -37,15 +56,11 @@ export const elysiumTools = {
   calculator: tool({
     description: 'Evaluate a mathematical expression. Use for any math, unit conversions, or calculations.',
     parameters: z.object({
-      expression: z.string().describe('The math expression to evaluate, e.g. "2 * (3 + 4)" or "Math.sqrt(144)"'),
+      expression: z.string().describe('The math expression to evaluate, e.g. "2 * (3 + 4)" or "sqrt(144)"'),
     }),
     execute: async ({ expression }) => {
       try {
-        const sanitized = expression.replace(/[^0-9+\-*/().,%\s]|(?<![a-zA-Z])(?:Math\.[a-zA-Z]+)/g, (match) => {
-          if (match.startsWith('Math.')) return match;
-          return '';
-        });
-        const result = new Function(`"use strict"; return (${expression})`)();
+        const result = evaluate(expression);
         return { result: String(result), expression };
       } catch (e: any) {
         return { error: e.message, expression };
