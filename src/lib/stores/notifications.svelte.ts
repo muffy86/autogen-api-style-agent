@@ -13,17 +13,19 @@ class NotificationStore {
       createdAt: new Date()
     };
 
-    this.notifications = [full, ...this.notifications].slice(0, 5);
+    const combined = [full, ...this.notifications];
+    const kept = combined.slice(0, 5);
+    const evicted = combined.slice(5);
 
-    const dropped = this.notifications.length < (this.timers.size);
-    if (dropped) {
-      for (const [timerId] of this.timers) {
-        if (!this.notifications.some((n) => n.id === timerId)) {
-          clearTimeout(this.timers.get(timerId)!);
-          this.timers.delete(timerId);
-        }
+    for (const n of evicted) {
+      const timer = this.timers.get(n.id);
+      if (timer) {
+        clearTimeout(timer);
+        this.timers.delete(n.id);
       }
     }
+
+    this.notifications = kept;
 
     if (full.duration && full.duration > 0) {
       const timer = setTimeout(() => {

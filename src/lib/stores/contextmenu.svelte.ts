@@ -1,4 +1,4 @@
-import type { ContextMenuItem, ContextMenuState } from '$lib/types';
+import type { ContextMenuItem } from '$lib/types';
 
 class ContextMenuStore {
   visible = $state(false);
