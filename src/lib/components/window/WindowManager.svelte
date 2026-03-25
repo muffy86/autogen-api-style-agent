@@ -7,6 +7,7 @@
   import SettingsApp from '$lib/components/apps/SettingsApp.svelte';
   import SearchApp from '$lib/components/apps/SearchApp.svelte';
   import DashboardApp from '$lib/components/apps/DashboardApp.svelte';
+  import GitHubApp from '$lib/components/apps/GitHubApp.svelte';
   import type { Component } from 'svelte';
 
   const appComponents: Record<string, Component> = {
@@ -15,7 +16,8 @@
     terminal: TerminalApp,
     settings: SettingsApp,
     search: SearchApp,
-    dashboard: DashboardApp
+    dashboard: DashboardApp,
+    github: GitHubApp
   };
 
   function getComponent(appId: string): Component {

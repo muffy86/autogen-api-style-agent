@@ -67,6 +67,17 @@ class AppRegistry {
       minWidth: 750,
       minHeight: 500,
       singleton: true
+    },
+    {
+      id: 'github',
+      name: 'GitHub',
+      icon: 'github',
+      description: 'GitHub repos, issues, and pull requests',
+      defaultWidth: 900,
+      defaultHeight: 600,
+      minWidth: 650,
+      minHeight: 450,
+      singleton: true
     }
   ]);
 

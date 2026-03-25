@@ -1,11 +1,12 @@
 <script lang="ts">
-  import { Sparkles, MessageSquare, Folder, Terminal, Settings, Search, LayoutDashboard } from 'lucide-svelte';
+  import { Sparkles, MessageSquare, Folder, Terminal, Settings, Search, LayoutDashboard, Github } from 'lucide-svelte';
   import { windowStore } from '$lib/stores/windows.svelte';
   import { desktopState } from '$lib/stores/desktop.svelte';
 
   const dockApps = [
     { id: 'launcher', name: 'Elysium', icon: Sparkles, isLauncher: true },
     { id: 'chat', name: 'Chat', icon: MessageSquare, isLauncher: false },
+    { id: 'github', name: 'GitHub', icon: Github, isLauncher: false },
     { id: 'files', name: 'Files', icon: Folder, isLauncher: false },
     { id: 'terminal', name: 'Terminal', icon: Terminal, isLauncher: false },
     { id: 'settings', name: 'Settings', icon: Settings, isLauncher: false },

@@ -7,6 +7,7 @@ import { streamText } from 'ai';
 import { env } from '$env/dynamic/private';
 import { checkRateLimit } from '$lib/server/rate-limit';
 import { validateChatRequest } from '$lib/server/validate-chat';
+import { getGitHubContext } from '$lib/server/github-context';
 import type { RequestHandler } from './$types';
 
 function getModel(provider: string, modelId: string) {
@@ -75,11 +76,33 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 
     const { messages, provider, modelId, systemPrompt } = validation.data;
 
+    let enhancedSystemPrompt = systemPrompt || 'You are Elysium, a helpful AI assistant running inside Elysium AI OS.';
+
+    const lastUserMessage = messages.filter((m: any) => m.role === 'user').pop()?.content?.toLowerCase() || '';
+    const githubKeywords = ['github', 'repo', 'repository', 'issue', 'pull request', 'pr', 'commit', 'branch'];
+    const isGitHubQuery = githubKeywords.some(kw => lastUserMessage.includes(kw));
+
+    if (isGitHubQuery) {
+      const { data: ghIntegration } = await locals.supabase
+        .from('integrations')
+        .select('access_token')
+        .eq('user_id', locals.user.id)
+        .eq('provider', 'github')
+        .single();
+
+      if (ghIntegration) {
+        const context = await getGitHubContext(ghIntegration.access_token);
+        if (context) {
+          enhancedSystemPrompt += context;
+        }
+      }
+    }
+
     const model = getModel(provider, modelId);
     const result = streamText({
       model,
       messages,
-      system: systemPrompt || 'You are Elysium, a helpful AI assistant running inside Elysium AI OS.',
+      system: enhancedSystemPrompt,
       maxOutputTokens: 4096,
     });
 
