@@ -41,6 +41,9 @@ export function validateChatRequest(body: unknown): { valid: true; data: ChatReq
   }
 
   for (const msg of messages) {
+    if (!msg || typeof msg !== 'object' || Array.isArray(msg)) {
+      return { valid: false, error: 'Each message must be an object with role and content' };
+    }
     if (!msg.role || !['user', 'assistant', 'system'].includes(msg.role)) {
       return { valid: false, error: 'Each message must have a valid role (user, assistant, system)' };
     }
