@@ -1,17 +1,4 @@
-Metadata-Version: 2.4
-Name: nanoclaw-bot
-Version: 0.1.0
-Summary: Telegram bot for remote AI agent configuration and management
-License: MIT
-Requires-Python: >=3.10
-Description-Content-Type: text/markdown
-Requires-Dist: python-telegram-bot>=21.0
-Requires-Dist: python-dotenv>=1.0.0
-Provides-Extra: test
-Requires-Dist: pytest>=8.0; extra == "test"
-Requires-Dist: pytest-asyncio>=0.23.0; extra == "test"
-
-# NanoClaw Bot
+# NanoClaw Bot — Telegram Agent Manager
 
 Telegram bot for remote AI agent configuration and management. Designed for Termux (Android) and Linux.
 

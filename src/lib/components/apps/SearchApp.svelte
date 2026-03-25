@@ -18,6 +18,9 @@
 </script>
 
 <div class="search-app">
+  <div class="dev-banner">
+    <span>🔍 Search is under development</span>
+  </div>
   <div class="search-header">
     <div class="search-input-wrapper">
       <Search size={18} />
@@ -79,6 +82,16 @@
     display: flex;
     flex-direction: column;
     height: 100%;
+  }
+
+  .dev-banner {
+    padding: 6px 16px;
+    background: rgba(245, 158, 11, 0.1);
+    border-bottom: 1px solid rgba(245, 158, 11, 0.2);
+    font-size: 11px;
+    color: #f59e0b;
+    text-align: center;
+    flex-shrink: 0;
   }
 
   .search-header {
