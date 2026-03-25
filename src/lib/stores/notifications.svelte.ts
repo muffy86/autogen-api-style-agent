@@ -15,6 +15,16 @@ class NotificationStore {
 
     this.notifications = [full, ...this.notifications].slice(0, 5);
 
+    const dropped = this.notifications.length < (this.timers.size);
+    if (dropped) {
+      for (const [timerId] of this.timers) {
+        if (!this.notifications.some((n) => n.id === timerId)) {
+          clearTimeout(this.timers.get(timerId)!);
+          this.timers.delete(timerId);
+        }
+      }
+    }
+
     if (full.duration && full.duration > 0) {
       const timer = setTimeout(() => {
         this.dismiss(id);
