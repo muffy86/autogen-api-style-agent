@@ -73,6 +73,16 @@ class ChatStore {
     this.activeConversationId = id;
     const conv = this.conversations.find(c => c.id === id);
     if (conv) {
+      const modelInfo = AVAILABLE_MODELS.find(m => m.id === conv.model);
+      if (!this.allowPaid && modelInfo && modelInfo.tier === 'paid') {
+        const free = AVAILABLE_MODELS.find(m => m.tier === 'free');
+        if (free) {
+          conv.model = free.id;
+          this.selectedModel = free.id;
+          this.save();
+          return;
+        }
+      }
       this.selectedModel = conv.model;
     }
   }
@@ -90,12 +100,19 @@ class ChatStore {
     // Ensure a free model is selected when paid is disabled
     if (!this.allowPaid) {
       const current = AVAILABLE_MODELS.find(m => m.id === this.selectedModel);
-      if (!current || current.tier === 'paid') {
-        const fallback = AVAILABLE_MODELS.find(m => m.tier === 'free');
-        if (fallback) {
-          this.selectedModel = fallback.id;
-          if (this.activeConversation) {
-            this.activeConversation.model = fallback.id;
+      let fallback = current && current.tier === 'free' ? current : undefined;
+      if (!fallback) fallback = AVAILABLE_MODELS.find(m => m.tier === 'free');
+      if (fallback) {
+        // Switch selected and active conversation to free
+        this.selectedModel = fallback.id;
+        if (this.activeConversation) {
+          this.activeConversation.model = fallback.id;
+        }
+        // Migrate ALL conversations that are on paid models to the chosen free fallback
+        for (const c of this.conversations) {
+          const info = AVAILABLE_MODELS.find(m => m.id === c.model);
+          if (!info || info.tier === 'paid') {
+            c.model = fallback.id;
           }
         }
       }
