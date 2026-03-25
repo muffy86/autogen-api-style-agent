@@ -140,25 +140,4 @@ export const elysiumTools = {
       }
     },
   }),
-
-  codeExec: tool({
-    description: 'Execute a JavaScript code snippet and return the result. Use for computations, data transformations, or demonstrating code behavior.',
-    parameters: z.object({
-      code: z.string().describe('JavaScript code to execute. Use console.log() for output.'),
-    }),
-    execute: async ({ code }) => {
-      try {
-        const logs: string[] = [];
-        const mockConsole = { log: (...args: any[]) => logs.push(args.map(String).join(' ')) };
-        const fn = new Function('console', `"use strict";\n${code}`);
-        const result = fn(mockConsole);
-        return {
-          output: logs.join('\n'),
-          returnValue: result !== undefined ? String(result) : undefined,
-        };
-      } catch (e: any) {
-        return { error: e.message };
-      }
-    },
-  }),
 };

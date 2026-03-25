@@ -54,7 +54,6 @@ You have access to these tools:
 - **calculator**: Evaluate math expressions
 - **webSearch**: Search the web for current information
 - **urlFetch**: Fetch and read web page content
-- **codeExec**: Execute JavaScript code snippets
 
 Use tools proactively when they would help answer the user's question. You can chain multiple tool calls.`,
       tools: elysiumTools,
