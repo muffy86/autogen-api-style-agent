@@ -44,13 +44,21 @@ export function validateChatRequest(body: unknown): { valid: true; data: ChatReq
     if (!msg.role || !['user', 'assistant', 'system'].includes(msg.role)) {
       return { valid: false, error: 'Each message must have a valid role (user, assistant, system)' };
     }
-    if (typeof msg.content === 'string' && msg.content.length > MAX_MESSAGE_LENGTH) {
+    if (typeof msg.content !== 'string') {
+      return { valid: false, error: 'Each message content must be a string' };
+    }
+    if (msg.content.length > MAX_MESSAGE_LENGTH) {
       return { valid: false, error: `Message content too long (max ${MAX_MESSAGE_LENGTH} chars)` };
     }
   }
 
-  if (systemPrompt && typeof systemPrompt === 'string' && systemPrompt.length > MAX_SYSTEM_PROMPT_LENGTH) {
-    return { valid: false, error: `System prompt too long (max ${MAX_SYSTEM_PROMPT_LENGTH} chars)` };
+  if (systemPrompt !== undefined && systemPrompt !== null) {
+    if (typeof systemPrompt !== 'string') {
+      return { valid: false, error: 'System prompt must be a string' };
+    }
+    if (systemPrompt.length > MAX_SYSTEM_PROMPT_LENGTH) {
+      return { valid: false, error: `System prompt too long (max ${MAX_SYSTEM_PROMPT_LENGTH} chars)` };
+    }
   }
 
   return {
