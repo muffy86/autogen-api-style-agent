@@ -85,8 +85,19 @@ export const elysiumTools = {
           /^\[::1\]$/,
           /^\[fc/,
           /^\[fd/,
+          /^\[::ffff:/,
         ];
-        if (blockedPatterns.some(p => p.test(hostname)) || parsed.protocol === 'file:') {
+        const mappedV4Match = hostname.match(/^\[::ffff:(\d+\.\d+\.\d+\.\d+)\]$/);
+        const mappedV4 = mappedV4Match ? mappedV4Match[1] : null;
+        const isBlockedMappedV4 = mappedV4 != null && [
+          /^127\./,
+          /^10\./,
+          /^172\.(1[6-9]|2\d|3[01])\./,
+          /^192\.168\./,
+          /^169\.254\./,
+          /^0\./,
+        ].some(p => p.test(mappedV4));
+        if (blockedPatterns.some(p => p.test(hostname)) || isBlockedMappedV4 || parsed.protocol === 'file:') {
           return { error: 'Access to internal/private URLs is not allowed', url: targetUrl };
         }
 
