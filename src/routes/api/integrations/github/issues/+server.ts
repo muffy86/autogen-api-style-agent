@@ -41,7 +41,7 @@ export const GET: RequestHandler = async ({ locals, url }) => {
     }
 
     const { data: issues } = await octokit.issues.listForAuthenticatedUser({
-      filter: 'assigned', state: 'open', per_page: 20, sort: 'updated',
+      filter: 'assigned', state: state as 'open' | 'closed' | 'all', per_page: 20, sort: 'updated',
     });
     const cleaned = issues.map(i => ({
       id: i.id, number: i.number, title: i.title, state: i.state,
