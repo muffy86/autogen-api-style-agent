@@ -28,16 +28,6 @@ class RAGStore {
     }
 
     this.chunks = this.chunks.filter(c => c.fileId !== fileId);
-    this.rebuildVocabulary();
-
-    for (const chunk of chunks) {
-      this.addToVocabulary(chunk);
-    }
-    this.computeIdf();
-
-    for (const chunk of this.chunks) {
-      chunk.vector = this.computeTfIdf(chunk.content);
-    }
 
     for (const chunk of chunks) {
       this.chunks.push({
@@ -45,8 +35,15 @@ class RAGStore {
         fileId,
         fileName,
         content: chunk,
-        vector: this.computeTfIdf(chunk),
+        vector: [],
       });
+    }
+
+    this.rebuildVocabulary();
+    this.computeIdf();
+
+    for (const chunk of this.chunks) {
+      chunk.vector = this.computeTfIdf(chunk.content);
     }
   }
 
