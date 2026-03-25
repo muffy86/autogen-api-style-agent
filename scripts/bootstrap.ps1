@@ -104,7 +104,12 @@ foreach ($key in $providers) {
         Write-Color "  ✅ $key found in environment" "Green"
         try {
             $envContent = Get-Content ".env" -ErrorAction SilentlyContinue
-            if (-not ($envContent -match "^$key=")) {
+            $hasEmpty = $envContent -match "^$key=$"
+            $hasPlaceholder = $envContent -match "^${key}=YOUR_"
+            if ($hasEmpty -or $hasPlaceholder) {
+                $updated = $envContent -replace "^$key=.*", "$key=$value"
+                Set-Content ".env" $updated -ErrorAction Stop
+            } elseif (-not ($envContent -match "^$key=")) {
                 Add-Content ".env" "$key=$value" -ErrorAction Stop
             }
         } catch {
