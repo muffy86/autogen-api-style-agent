@@ -103,14 +103,18 @@ foreach ($key in $providers) {
     if ($value) {
         Write-Color "  ✅ $key found in environment" "Green"
         try {
-            $envContent = Get-Content ".env" -ErrorAction SilentlyContinue
-            $hasEmpty = $envContent -match "^$key=$"
-            $hasPlaceholder = $envContent -match "^${key}=YOUR_"
-            if ($hasEmpty -or $hasPlaceholder) {
-                $updated = $envContent -replace "^$key=.*", "$key=$value"
-                Set-Content ".env" $updated -ErrorAction Stop
-            } elseif (-not ($envContent -match "^$key=")) {
+            $envLines = @(Get-Content ".env" -ErrorAction SilentlyContinue)
+            $keyLine = $envLines | Where-Object { $_ -match "^$key=" } | Select-Object -First 1
+            if (-not $keyLine) {
                 Add-Content ".env" "$key=$value" -ErrorAction Stop
+            } else {
+                $curVal = ($keyLine -split "=", 2)[1]
+                if ([string]::IsNullOrEmpty($curVal) -or $curVal -match "^YOUR_") {
+                    $updated = $envLines | ForEach-Object {
+                        if ($_ -match "^$key=") { "$key=$value" } else { $_ }
+                    }
+                    Set-Content ".env" $updated -ErrorAction Stop
+                }
             }
         } catch {
             Write-Color "  ⚠️  Failed to write $key to .env: $_" "Yellow"

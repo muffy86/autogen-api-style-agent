@@ -65,10 +65,24 @@ found=0
 for key in "${providers[@]}"; do
     if [ -n "${!key:-}" ]; then
         echo -e "  ${GREEN}✅ $key found in environment${NC}"
-        if grep -q "^$key=$" .env 2>/dev/null || grep -q "^$key=YOUR_" .env 2>/dev/null; then
-            sed -i "s|^$key=.*|$key=${!key}|" .env || echo -e "  ${YELLOW}⚠️  Failed to update $key in .env${NC}" >&2
-        elif ! grep -q "^$key=" .env 2>/dev/null; then
+        env_val=$(grep "^$key=" .env 2>/dev/null || true)
+        if [ -z "$env_val" ]; then
             echo "$key=${!key}" >> .env || echo -e "  ${YELLOW}⚠️  Failed to write $key to .env${NC}" >&2
+        else
+            cur_val="${env_val#*=}"
+            if [ -z "$cur_val" ] || echo "$cur_val" | grep -q "^YOUR_"; then
+                tmpfile=$(mktemp)
+                while IFS= read -r line; do
+                    if echo "$line" | grep -q "^$key="; then
+                        echo "$key=${!key}"
+                    else
+                        echo "$line"
+                    fi
+                done < .env > "$tmpfile" && mv "$tmpfile" .env || {
+                    rm -f "$tmpfile"
+                    echo -e "  ${YELLOW}⚠️  Failed to update $key in .env${NC}" >&2
+                }
+            fi
         fi
         found=$((found + 1))
     else
