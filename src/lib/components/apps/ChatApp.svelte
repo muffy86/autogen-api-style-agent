@@ -47,7 +47,14 @@
       pendingModelId = null;
     },
     onError: (err) => {
-      errorMessage = err.message || 'Something went wrong';
+      const msg = err.message || 'Something went wrong';
+      if (msg.includes('401') || msg.includes('Authentication required')) {
+        errorMessage = 'Your session has expired. Please refresh and sign in again.';
+      } else if (msg.includes('429') || msg.includes('Rate limit')) {
+        errorMessage = 'Too many requests. Please wait a moment before sending another message.';
+      } else {
+        errorMessage = msg;
+      }
     },
   });
 

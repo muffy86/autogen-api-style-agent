@@ -5,6 +5,8 @@ import { createXai } from '@ai-sdk/xai';
 import { createGroq } from '@ai-sdk/groq';
 import { streamText } from 'ai';
 import { env } from '$env/dynamic/private';
+import { checkRateLimit } from '$lib/server/rate-limit';
+import { validateChatRequest } from '$lib/server/validate-chat';
 import type { RequestHandler } from './$types';
 
 function getModel(provider: string, modelId: string) {
@@ -39,11 +41,41 @@ function getModel(provider: string, modelId: string) {
   }
 }
 
-export const POST: RequestHandler = async ({ request }) => {
-  try {
-    const { messages, provider, modelId, systemPrompt } = await request.json();
-    const model = getModel(provider, modelId);
+export const POST: RequestHandler = async ({ request, locals }) => {
+  if (!locals.session || !locals.user) {
+    return new Response(JSON.stringify({ error: 'Authentication required' }), {
+      status: 401,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
 
+  const rateLimit = checkRateLimit(locals.user.id);
+  if (!rateLimit.allowed) {
+    return new Response(JSON.stringify({
+      error: 'Rate limit exceeded. Please wait before sending more messages.',
+      retryAfterMs: rateLimit.resetMs,
+    }), {
+      status: 429,
+      headers: {
+        'Content-Type': 'application/json',
+        'Retry-After': Math.ceil(rateLimit.resetMs / 1000).toString(),
+      },
+    });
+  }
+
+  try {
+    const body = await request.json();
+    const validation = validateChatRequest(body);
+    if (!validation.valid) {
+      return new Response(JSON.stringify({ error: validation.error }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    const { messages, provider, modelId, systemPrompt } = validation.data;
+
+    const model = getModel(provider, modelId);
     const result = streamText({
       model,
       messages,
@@ -60,7 +92,8 @@ export const POST: RequestHandler = async ({ request }) => {
         headers: { 'Content-Type': 'application/json' },
       });
     }
-    return new Response(JSON.stringify({ error: message }), {
+    console.error('Chat API error:', err);
+    return new Response(JSON.stringify({ error: 'Internal server error' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
     });
