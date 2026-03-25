@@ -41,6 +41,8 @@
     "@ai-sdk/openai": "^3.0.47",
     "@ai-sdk/svelte": "^4.0.134",
     "@ai-sdk/xai": "^3.0.72",
+    "@supabase/ssr": "^0.6.1",
+    "@supabase/supabase-js": "^2.100.0",
     "ai": "^6.0.134",
     "dompurify": "^3.3.3",
     "highlight.js": "^11.11.1",
