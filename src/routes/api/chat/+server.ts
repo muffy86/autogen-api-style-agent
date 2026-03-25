@@ -39,15 +39,33 @@ function getModel(provider: string, modelId: string) {
   }
 }
 
+function buildFileContextPrompt(
+  fileContext: Array<{ name: string; type: string; mimeType: string; content?: string }> | undefined
+): string {
+  if (!fileContext?.length) return '';
+
+  const parts = fileContext.map(f => {
+    if (f.content) {
+      return `[File: ${f.name}]\n\`\`\`\n${f.content}\n\`\`\``;
+    }
+    return `[Attached: ${f.name} (${f.mimeType})]`;
+  });
+
+  return '\n\nThe user has attached the following files:\n' + parts.join('\n\n');
+}
+
 export const POST: RequestHandler = async ({ request }) => {
   try {
-    const { messages, provider, modelId, systemPrompt } = await request.json();
+    const { messages, provider, modelId, systemPrompt, fileContext } = await request.json();
     const model = getModel(provider, modelId);
+
+    const basePrompt = systemPrompt || 'You are Elysium, a helpful AI assistant running inside Elysium AI OS.';
+    const filePrompt = buildFileContextPrompt(fileContext);
 
     const result = streamText({
       model,
       messages,
-      system: systemPrompt || 'You are Elysium, a helpful AI assistant running inside Elysium AI OS.',
+      system: basePrompt + filePrompt,
       maxOutputTokens: 4096,
     });
 
