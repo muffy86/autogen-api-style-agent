@@ -12,7 +12,14 @@ function getModel(provider: string, modelId: string) {
     case 'openai': {
       const key = env.OPENAI_API_KEY;
       if (!key) throw new Error('OPENAI_API_KEY not configured');
-      return createOpenAI({ apiKey: key })(modelId);
+      const baseURL = env.OPENAI_BASE_URL;
+      return createOpenAI({ apiKey: key, ...(baseURL ? { baseURL } : {}) })(modelId);
+    }
+    case 'openrouter': {
+      const key = env.OPENROUTER_API_KEY ?? env.OPENAI_API_KEY;
+      if (!key) throw new Error('OPENROUTER_API_KEY or OPENAI_API_KEY not configured');
+      const baseURL = env.OPENROUTER_BASE_URL ?? 'https://openrouter.ai/api/v1';
+      return createOpenAI({ apiKey: key, baseURL })(modelId);
     }
     case 'anthropic': {
       const key = env.ANTHROPIC_API_KEY;
