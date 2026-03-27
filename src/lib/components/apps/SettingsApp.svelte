@@ -56,7 +56,7 @@
 
   function handleThemeChange(theme: string) {
     themeStore.setTheme(theme as 'dark' | 'light' | 'system');
-    notificationStore.add('Theme Changed', `Switched to ${theme} theme`, 'success', 3000);
+    notificationStore.push({ type: 'success', title: 'Theme Changed', message: `Switched to ${theme} theme`, duration: 3000 });
   }
 
   function handleAccentChange(value: string) {

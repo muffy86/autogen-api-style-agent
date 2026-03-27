@@ -1,155 +1,108 @@
 <script lang="ts">
-  import { Search, MessageSquare, Folder, Terminal, Settings, LayoutDashboard, Moon, Sun, X as XIcon, Maximize, Command } from 'lucide-svelte';
-  import { windowStore } from '$lib/stores/windows.svelte';
-  import { themeStore } from '$lib/stores/theme.svelte';
-  import { chatStore } from '$lib/stores/chat.svelte';
+  import { commandPaletteStore } from '$lib/stores/commandpalette.svelte';
+  import { Search } from 'lucide-svelte';
 
-  interface Props {
-    visible: boolean;
-    onclose: () => void;
-  }
-
-  let { visible, onclose }: Props = $props();
-
-  let query = $state('');
   let selectedIndex = $state(0);
   let inputEl: HTMLInputElement | undefined = $state(undefined);
 
-  interface PaletteAction {
-    id: string;
-    label: string;
-    category: string;
-    icon: any;
-    shortcut?: string;
-    action: () => void;
-  }
+  const categoryLabels: Record<string, string> = {
+    app: 'Apps',
+    action: 'Actions',
+    setting: 'Settings',
+    recent: 'Recent'
+  };
 
-  const appActions: PaletteAction[] = [
-    { id: 'open-chat', label: 'Open Chat', category: 'Apps', icon: MessageSquare, action: () => { windowStore.open('chat'); onclose(); } },
-    { id: 'open-files', label: 'Open Files', category: 'Apps', icon: Folder, action: () => { windowStore.open('files'); onclose(); } },
-    { id: 'open-terminal', label: 'Open Terminal', category: 'Apps', icon: Terminal, action: () => { windowStore.open('terminal'); onclose(); } },
-    { id: 'open-settings', label: 'Open Settings', category: 'Apps', icon: Settings, action: () => { windowStore.open('settings'); onclose(); } },
-    { id: 'open-search', label: 'Open Search', category: 'Apps', icon: Search, action: () => { windowStore.open('search'); onclose(); } },
-    { id: 'open-dashboard', label: 'Open Dashboard', category: 'Apps', icon: LayoutDashboard, action: () => { windowStore.open('dashboard'); onclose(); } },
-  ];
-
-  const themeActions: PaletteAction[] = [
-    { id: 'theme-dark', label: 'Switch to Dark Theme', category: 'Theme', icon: Moon, action: () => { themeStore.setTheme('dark'); onclose(); } },
-    { id: 'theme-light', label: 'Switch to Light Theme', category: 'Theme', icon: Sun, action: () => { themeStore.setTheme('light'); onclose(); } },
-  ];
-
-  const quickActions: PaletteAction[] = [
-    { id: 'new-chat', label: 'New Chat', category: 'Actions', icon: MessageSquare, shortcut: '⌘N', action: () => { chatStore.createConversation(); windowStore.open('chat'); onclose(); } },
-    { id: 'close-window', label: 'Close Active Window', category: 'Actions', icon: XIcon, action: () => { const aw = windowStore.activeWindow; if (aw) windowStore.close(aw.id); onclose(); } },
-    { id: 'maximize-window', label: 'Maximize Active Window', category: 'Actions', icon: Maximize, action: () => { const aw = windowStore.activeWindow; if (aw) windowStore.maximize(aw.id); onclose(); } },
-  ];
-
-  const allActions = [...appActions, ...themeActions, ...quickActions];
-
-  let filtered = $derived.by(() => {
-    if (!query.trim()) return allActions;
-    const q = query.toLowerCase();
-    return allActions.filter(
-      (a) => a.label.toLowerCase().includes(q) || a.category.toLowerCase().includes(q)
-    );
-  });
-
-  let grouped = $derived.by(() => {
-    const groups: Record<string, PaletteAction[]> = {};
-    for (const item of filtered) {
-      if (!groups[item.category]) groups[item.category] = [];
-      groups[item.category].push(item);
-    }
-    return Object.entries(groups);
-  });
-
-  $effect(() => {
-    if (visible && inputEl) {
-      query = '';
-      selectedIndex = 0;
-      requestAnimationFrame(() => inputEl?.focus());
-    }
-  });
-
-  $effect(() => {
-    query;
-    selectedIndex = 0;
-  });
+  let flatList = $derived(commandPaletteStore.filtered);
 
   function handleKeydown(e: KeyboardEvent) {
     if (e.key === 'Escape') {
       e.preventDefault();
-      onclose();
+      commandPaletteStore.close();
     } else if (e.key === 'ArrowDown') {
       e.preventDefault();
-      selectedIndex = Math.min(selectedIndex + 1, filtered.length - 1);
+      selectedIndex = (selectedIndex + 1) % Math.max(1, flatList.length);
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
-      selectedIndex = Math.max(selectedIndex - 1, 0);
+      selectedIndex = (selectedIndex - 1 + Math.max(1, flatList.length)) % Math.max(1, flatList.length);
     } else if (e.key === 'Enter') {
       e.preventDefault();
-      if (filtered[selectedIndex]) {
-        filtered[selectedIndex].action();
-      }
+      const cmd = flatList[selectedIndex];
+      if (cmd) commandPaletteStore.execute(cmd);
     }
+  }
+
+  function handleInput(e: Event) {
+    commandPaletteStore.query = (e.target as HTMLInputElement).value;
+    selectedIndex = 0;
   }
 
   function handleBackdropClick(e: MouseEvent) {
     if ((e.target as HTMLElement).classList.contains('palette-overlay')) {
-      onclose();
+      commandPaletteStore.close();
     }
   }
 
-  function getFlatIndex(catIdx: number, itemIdx: number): number {
-    let idx = 0;
-    for (let i = 0; i < catIdx; i++) {
-      idx += grouped[i][1].length;
+  $effect(() => {
+    if (commandPaletteStore.visible) {
+      requestAnimationFrame(() => inputEl?.focus());
     }
-    return idx + itemIdx;
-  }
+  });
 </script>
 
-{#if visible}
+{#if commandPaletteStore.visible}
   <!-- svelte-ignore a11y_no_static_element_interactions -->
   <!-- svelte-ignore a11y_click_events_have_key_events -->
   <div class="palette-overlay" onclick={handleBackdropClick}>
     <!-- svelte-ignore a11y_no_static_element_interactions -->
-    <div class="palette-container glass" onkeydown={handleKeydown}>
-      <div class="palette-input-row">
-        <Command size={16} strokeWidth={2} />
+    <div class="palette" onkeydown={handleKeydown}>
+      <div class="palette-input-wrap">
+        <Search size={18} strokeWidth={1.8} />
         <input
           bind:this={inputEl}
           class="palette-input"
           type="text"
-          placeholder="Type a command..."
-          bind:value={query}
+          placeholder="Search apps, actions, settings..."
+          value={commandPaletteStore.query}
+          oninput={handleInput}
         />
-        <kbd class="palette-esc">ESC</kbd>
+        <kbd class="palette-kbd">ESC</kbd>
       </div>
       <div class="palette-results scrollbar-thin">
-        {#if filtered.length === 0}
-          <div class="palette-empty">No results found</div>
-        {:else}
-          {#each grouped as [category, items], catIdx}
-            <div class="palette-category">
-              <span class="palette-category-label">{category}</span>
-              {#each items as item, itemIdx}
-                {@const flatIdx = getFlatIndex(catIdx, itemIdx)}
-                <button
-                  class="palette-item"
-                  class:selected={flatIdx === selectedIndex}
-                  onmouseenter={() => (selectedIndex = flatIdx)}
-                  onclick={() => item.action()}
-                >
-                  <item.icon size={16} strokeWidth={1.5} />
-                  <span class="palette-item-label">{item.label}</span>
-                  {#if item.shortcut}
-                    <kbd class="palette-shortcut">{item.shortcut}</kbd>
+        {#each Object.entries(commandPaletteStore.grouped) as [cat, cmds]}
+          <div class="palette-group">
+            <div class="palette-group-label">{categoryLabels[cat] ?? cat}</div>
+            {#each cmds as cmd}
+              {@const idx = flatList.indexOf(cmd)}
+              <!-- svelte-ignore a11y_click_events_have_key_events -->
+              <div
+                class="palette-item"
+                class:selected={idx === selectedIndex}
+                role="option"
+                aria-selected={idx === selectedIndex}
+                onclick={() => commandPaletteStore.execute(cmd)}
+                onmouseenter={() => (selectedIndex = idx)}
+              >
+                {#if cmd.icon}
+                  {@const Icon = cmd.icon}
+                  <span class="palette-icon">
+                    <Icon size={18} strokeWidth={1.6} />
+                  </span>
+                {/if}
+                <div class="palette-item-text">
+                  <span class="palette-item-title">{cmd.title}</span>
+                  {#if cmd.description}
+                    <span class="palette-item-desc">{cmd.description}</span>
                   {/if}
-                </button>
-              {/each}
-            </div>
-          {/each}
+                </div>
+                {#if cmd.shortcut}
+                  <kbd class="palette-shortcut">{cmd.shortcut}</kbd>
+                {/if}
+              </div>
+            {/each}
+          </div>
+        {/each}
+        {#if flatList.length === 0}
+          <div class="palette-empty">No results found</div>
         {/if}
       </div>
     </div>
@@ -160,7 +113,7 @@
   .palette-overlay {
     position: fixed;
     inset: 0;
-    z-index: 8600;
+    z-index: 9800;
     background: rgba(0, 0, 0, 0.4);
     backdrop-filter: blur(4px);
     -webkit-backdrop-filter: blur(4px);
@@ -170,35 +123,39 @@
     animation: fadeIn 120ms ease-out;
   }
 
-  .palette-container {
-    width: 520px;
-    max-height: 420px;
-    border-radius: var(--radius-lg);
+  .palette {
+    width: 100%;
+    max-width: 640px;
+    max-height: 460px;
+    background: rgba(16, 16, 28, 0.95);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 14px;
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.7), 0 0 1px rgba(255, 255, 255, 0.1);
     display: flex;
     flex-direction: column;
     overflow: hidden;
     animation: paletteIn 200ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
-    box-shadow: 0 16px 64px rgba(0, 0, 0, 0.5), 0 0 1px rgba(255, 255, 255, 0.1);
     align-self: flex-start;
   }
 
-  .palette-input-row {
+  .palette-input-wrap {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 14px 16px;
-    border-bottom: 1px solid var(--border-subtle);
+    gap: 10px;
+    padding: 14px 18px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
     color: var(--text-muted);
   }
 
   .palette-input {
     flex: 1;
     border: none;
-    background: transparent;
-    font-size: 16px;
-    color: var(--text-primary);
+    background: none;
     outline: none;
-    font-weight: 400;
+    font-size: 17px;
+    color: var(--text-primary);
     font-family: inherit;
   }
 
@@ -206,77 +163,104 @@
     color: var(--text-muted);
   }
 
-  .palette-esc {
-    font-size: 10px;
+  .palette-kbd {
+    font-size: 11px;
     padding: 2px 6px;
     border-radius: 4px;
-    background: var(--bg-surface);
-    border: 1px solid var(--border-subtle);
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.1);
     color: var(--text-muted);
     font-family: inherit;
   }
 
   .palette-results {
-    flex: 1;
     overflow-y: auto;
     padding: 6px;
+    max-height: 380px;
   }
 
-  .palette-category {
+  .palette-group {
     margin-bottom: 4px;
   }
 
-  .palette-category-label {
-    display: block;
+  .palette-group-label {
     font-size: 11px;
     font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.06em;
     color: var(--text-muted);
-    padding: 6px 10px 4px;
+    padding: 8px 10px 4px;
   }
 
   .palette-item {
     display: flex;
     align-items: center;
     gap: 10px;
-    width: 100%;
-    padding: 10px 10px;
-    border: none;
-    background: transparent;
-    border-radius: var(--radius-sm);
+    padding: 8px 10px;
+    border-radius: 8px;
     cursor: pointer;
-    font-size: 14px;
-    color: var(--text-secondary);
-    transition: all 80ms ease;
-    text-align: left;
-    font-family: inherit;
+    transition: background 80ms ease;
   }
 
-  .palette-item:hover,
   .palette-item.selected {
     background: var(--accent-subtle);
-    color: var(--text-primary);
   }
 
-  .palette-item-label {
+  .palette-icon {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 7px;
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--text-secondary);
+    flex-shrink: 0;
+  }
+
+  .palette-item.selected .palette-icon {
+    background: rgba(139, 92, 246, 0.2);
+    color: var(--accent-glow);
+  }
+
+  .palette-item-text {
     flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .palette-item-title {
+    font-size: 14px;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .palette-item-desc {
+    font-size: 12px;
+    color: var(--text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .palette-shortcut {
     font-size: 11px;
     padding: 2px 6px;
     border-radius: 4px;
-    background: var(--bg-surface);
-    border: 1px solid var(--border-subtle);
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
     color: var(--text-muted);
+    flex-shrink: 0;
     font-family: inherit;
   }
 
   .palette-empty {
     padding: 24px;
     text-align: center;
-    font-size: 13px;
     color: var(--text-muted);
+    font-size: 14px;
   }
 </style>

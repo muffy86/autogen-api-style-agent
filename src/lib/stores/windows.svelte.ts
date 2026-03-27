@@ -136,10 +136,6 @@ class WindowStore {
     }
   }
 
-  closeAll(): void {
-    this.windows = [];
-  }
-
   focus(id: string): void {
     this.nextZIndex++;
     this.windows.forEach((w) => {
@@ -238,6 +234,14 @@ class WindowStore {
     this.windows.forEach((w) => {
       w.isFocused = false;
     });
+  }
+
+  closeAll(appId?: string): void {
+    if (appId) {
+      this.windows = this.windows.filter((w) => w.appId !== appId);
+    } else {
+      this.windows = [];
+    }
   }
 }
 

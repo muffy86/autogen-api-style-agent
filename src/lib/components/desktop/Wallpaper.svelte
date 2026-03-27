@@ -2,11 +2,55 @@
   import { themeStore } from '$lib/stores/theme.svelte';
 
   let isLight = $derived(themeStore.resolved === 'light');
+
+  let starShadows = $state('');
+  let twinkleStars = $state<{ x: number; y: number; delay: number; size: number }[]>([]);
+
+  function generateStars() {
+    const shadows: string[] = [];
+    for (let i = 0; i < 100; i++) {
+      const x = Math.round(Math.random() * 2000);
+      const y = Math.round(Math.random() * 1200);
+      const opacity = 0.15 + Math.random() * 0.35;
+      shadows.push(`${x}px ${y}px 0 0 rgba(255,255,255,${opacity.toFixed(2)})`);
+    }
+    starShadows = shadows.join(',');
+
+    const tStars: typeof twinkleStars = [];
+    for (let i = 0; i < 5; i++) {
+      tStars.push({
+        x: 10 + Math.random() * 80,
+        y: 5 + Math.random() * 85,
+        delay: Math.random() * 5,
+        size: 1.5 + Math.random() * 1.5
+      });
+    }
+    twinkleStars = tStars;
+  }
+
+  $effect(() => {
+    generateStars();
+  });
 </script>
 
 <div class="wallpaper" class:light={isLight}>
   <div class="nebula"></div>
-  <div class="stars"></div>
+  <div class="conic-nebula"></div>
+  <div class="stars-field" style="box-shadow: {starShadows};"></div>
+  <div class="stars-bg"></div>
+  {#each twinkleStars as star}
+    <div
+      class="twinkle-star"
+      style="
+        left: {star.x}%;
+        top: {star.y}%;
+        width: {star.size}px;
+        height: {star.size}px;
+        animation-delay: {star.delay}s;
+      "
+    ></div>
+  {/each}
+  <div class="aurora"></div>
   <div class="particles"></div>
 </div>
 
@@ -40,7 +84,44 @@
       radial-gradient(ellipse at 30% 30%, rgba(139, 92, 246, 0.06) 0%, transparent 45%);
   }
 
-  .stars {
+  .conic-nebula {
+    position: absolute;
+    top: 20%;
+    left: 30%;
+    width: 60%;
+    height: 60%;
+    background: conic-gradient(
+      from 0deg,
+      rgba(139, 92, 246, 0.04),
+      rgba(99, 102, 241, 0.02),
+      rgba(168, 85, 247, 0.04),
+      rgba(79, 70, 229, 0.02),
+      rgba(139, 92, 246, 0.04)
+    );
+    border-radius: 50%;
+    filter: blur(60px);
+    animation: conicSpin 60s linear infinite;
+    opacity: 0.6;
+  }
+
+  .wallpaper.light .conic-nebula {
+    opacity: 0.3;
+  }
+
+  .stars-field {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    top: 0;
+    left: 0;
+    background: transparent;
+  }
+
+  .wallpaper.light .stars-field {
+    opacity: 0;
+  }
+
+  .stars-bg {
     position: absolute;
     inset: 0;
     background-image:
@@ -58,7 +139,7 @@
       radial-gradient(1.5px 1.5px at 70% 40%, rgba(139, 92, 246, 0.12), transparent);
   }
 
-  .wallpaper.light .stars {
+  .wallpaper.light .stars-bg {
     background-image:
       radial-gradient(1px 1px at 10% 15%, rgba(139, 92, 246, 0.12), transparent),
       radial-gradient(1px 1px at 25% 35%, rgba(99, 102, 241, 0.08), transparent),
@@ -68,6 +149,39 @@
       radial-gradient(1px 1px at 85% 65%, rgba(139, 92, 246, 0.05), transparent),
       radial-gradient(1.5px 1.5px at 40% 60%, rgba(167, 139, 250, 0.1), transparent),
       radial-gradient(1.5px 1.5px at 70% 40%, rgba(139, 92, 246, 0.08), transparent);
+  }
+
+  .twinkle-star {
+    position: absolute;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.8);
+    box-shadow: 0 0 4px rgba(255, 255, 255, 0.4);
+    animation: twinkle 3s ease-in-out infinite;
+  }
+
+  .wallpaper.light .twinkle-star {
+    background: rgba(139, 92, 246, 0.5);
+    box-shadow: 0 0 4px rgba(139, 92, 246, 0.3);
+  }
+
+  .aurora {
+    position: absolute;
+    bottom: 20%;
+    left: -10%;
+    width: 120%;
+    height: 120px;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(139, 92, 246, 0.06) 20%,
+      rgba(99, 102, 241, 0.08) 40%,
+      rgba(168, 85, 247, 0.05) 60%,
+      rgba(79, 70, 229, 0.06) 80%,
+      transparent 100%
+    );
+    filter: blur(40px);
+    animation: aurora 20s ease-in-out infinite;
+    opacity: 0.5;
   }
 
   .particles {

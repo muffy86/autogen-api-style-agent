@@ -1,8 +1,9 @@
 <script lang="ts">
   import type { WindowState } from '$lib/types';
   import { windowStore, detectSnapZone } from '$lib/stores/windows.svelte';
+  import { contextMenuStore } from '$lib/stores/contextmenu.svelte';
   import type { Component } from 'svelte';
-  import { Minus, Square, X } from 'lucide-svelte';
+  import { Minus, Square, X, Maximize2, ArrowLeftToLine, ArrowRightToLine } from 'lucide-svelte';
   import { appRegistry } from '$lib/stores/apps.svelte';
 
   interface Props {
@@ -25,9 +26,9 @@
   let resizeStartY = $state(0);
   let windowEl: HTMLDivElement | undefined = $state(undefined);
   let isClosing = $state(false);
+  let controlsHovered = $state(false);
 
   let appDef = $derived(appRegistry.getApp(win.appId));
-  let appIcon = $derived(appDef?.icon ?? 'app');
 
   function handleTitleMousedown(e: MouseEvent) {
     if ((e.target as HTMLElement).closest('.window-controls')) return;
@@ -126,6 +127,19 @@
   function handleFocus() {
     windowStore.focus(win.id);
   }
+
+  function handleTitleContextMenu(e: MouseEvent) {
+    e.preventDefault();
+    contextMenuStore.open(e.clientX, e.clientY, [
+      { id: 'min', label: 'Minimize', shortcut: '', action: () => windowStore.minimize(win.id) },
+      { id: 'max', label: win.isMaximized ? 'Restore' : 'Maximize', action: () => windowStore.maximize(win.id) },
+      { id: 'sep1', label: '', separator: true, action: () => {} },
+      { id: 'snap-l', label: 'Snap Left', icon: ArrowLeftToLine, action: () => windowStore.snap(win.id, 'left') },
+      { id: 'snap-r', label: 'Snap Right', icon: ArrowRightToLine, action: () => windowStore.snap(win.id, 'right') },
+      { id: 'sep2', label: '', separator: true, action: () => {} },
+      { id: 'close', label: 'Close Window', shortcut: '⌘W', danger: true, icon: X, action: handleClose }
+    ]);
+  }
 </script>
 
 {#if !win.isMinimized}
@@ -146,43 +160,63 @@
     "
     onmousedown={handleFocus}
   >
-    <!-- Title bar -->
     <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div
       class="title-bar"
       onmousedown={handleTitleMousedown}
       ondblclick={handleTitleDblClick}
+      oncontextmenu={handleTitleContextMenu}
     >
-      <div class="title-info">
-        <span class="title-text">{win.title}</span>
-      </div>
-      <div class="window-controls">
+      <!-- svelte-ignore a11y_no_static_element_interactions -->
+      <div
+        class="window-controls"
+        onmouseenter={() => (controlsHovered = true)}
+        onmouseleave={() => (controlsHovered = false)}
+      >
         <button
-          class="control-btn minimize"
+          class="traffic-light close"
+          class:show-icon={controlsHovered}
+          class:unfocused={!win.isFocused}
+          aria-label="Close"
+          onclick={handleClose}
+        >
+          {#if controlsHovered}
+            <X size={8} strokeWidth={3} />
+          {/if}
+        </button>
+        <button
+          class="traffic-light minimize"
+          class:show-icon={controlsHovered}
+          class:unfocused={!win.isFocused}
           aria-label="Minimize"
           onclick={() => windowStore.minimize(win.id)}
         >
-          <Minus size={10} strokeWidth={2.5} />
+          {#if controlsHovered}
+            <Minus size={8} strokeWidth={3} />
+          {/if}
         </button>
         <button
-          class="control-btn maximize"
+          class="traffic-light maximize"
+          class:show-icon={controlsHovered}
+          class:unfocused={!win.isFocused}
           aria-label="Maximize"
           onclick={() => windowStore.maximize(win.id)}
         >
-          <Square size={9} strokeWidth={2.5} />
-        </button>
-        <button class="control-btn close" aria-label="Close" onclick={handleClose}>
-          <X size={11} strokeWidth={2.5} />
+          {#if controlsHovered}
+            <Maximize2 size={7} strokeWidth={2.5} />
+          {/if}
         </button>
       </div>
+      <div class="title-center">
+        <span class="title-text">{win.title}</span>
+      </div>
+      <div class="title-spacer"></div>
     </div>
 
-    <!-- Window body -->
     <div class="window-body">
       {@render appSlot()}
     </div>
 
-    <!-- Resize handles -->
     {#if !win.isMaximized}
       <div class="resize-handle n" onmousedown={(e) => handleResizeMousedown(e, 'n')}></div>
       <div class="resize-handle s" onmousedown={(e) => handleResizeMousedown(e, 's')}></div>
@@ -243,7 +277,6 @@
     height: 40px;
     display: flex;
     align-items: center;
-    justify-content: space-between;
     padding: 0 12px;
     background: var(--titlebar-bg);
     border-bottom: 1px solid var(--border-subtle);
@@ -255,10 +288,53 @@
     cursor: grabbing;
   }
 
-  .title-info {
+  .window-controls {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 7px;
+    flex-shrink: 0;
+    padding-right: 8px;
+  }
+
+  .traffic-light {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 150ms ease;
+    padding: 0;
+    color: rgba(0, 0, 0, 0.6);
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.15);
+  }
+
+  .traffic-light.close {
+    background: #ff5f57;
+  }
+
+  .traffic-light.minimize {
+    background: #febc2e;
+  }
+
+  .traffic-light.maximize {
+    background: #28c840;
+  }
+
+  .traffic-light.unfocused {
+    background: #4a4a4a;
+  }
+
+  .traffic-light:hover {
+    filter: brightness(1.1);
+  }
+
+  .title-center {
+    flex: 1;
+    display: flex;
+    justify-content: center;
     min-width: 0;
   }
 
@@ -275,43 +351,9 @@
     color: var(--text-muted);
   }
 
-  .window-controls {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-
-  .control-btn {
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
-    border: none;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    color: var(--text-muted);
-    background: var(--bg-surface);
-    transition: all var(--transition-fast);
-  }
-
-  .control-btn:hover {
-    color: var(--text-primary);
-  }
-
-  .control-btn.close:hover {
-    background: rgba(239, 68, 68, 0.8);
-    color: white;
-  }
-
-  .control-btn.minimize:hover {
-    background: rgba(234, 179, 8, 0.6);
-    color: white;
-  }
-
-  .control-btn.maximize:hover {
-    background: rgba(34, 197, 94, 0.6);
-    color: white;
+  .title-spacer {
+    width: 64px;
+    flex-shrink: 0;
   }
 
   .window-body {

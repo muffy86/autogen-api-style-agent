@@ -3,17 +3,40 @@
   import TopBar from './TopBar.svelte';
   import Dock from './Dock.svelte';
   import AppLauncher from './AppLauncher.svelte';
+  import ContextMenu from './ContextMenu.svelte';
+  import CommandPalette from './CommandPalette.svelte';
+  import NotificationToast from './NotificationToast.svelte';
+  import SnapZone from './SnapZone.svelte';
   import WindowManager from '$lib/components/window/WindowManager.svelte';
   import NotificationCenter from './NotificationCenter.svelte';
-  import CommandPalette from './CommandPalette.svelte';
-  import ContextMenu from './ContextMenu.svelte';
   import { windowStore } from '$lib/stores/windows.svelte';
   import { desktopState } from '$lib/stores/desktop.svelte';
-  import { chatStore } from '$lib/stores/chat.svelte';
-  import { MessageSquare, Terminal, Settings, Image } from 'lucide-svelte';
+  import { contextMenuStore } from '$lib/stores/contextmenu.svelte';
+  import { commandPaletteStore } from '$lib/stores/commandpalette.svelte';
+  import { notificationStore } from '$lib/stores/notifications.svelte';
+  import {
+    MessageSquare, Folder, Terminal, Settings, Search,
+    RefreshCw, Monitor, Info, Layout, Moon, Sparkles
+  } from 'lucide-svelte';
+  import type { PaletteCommand } from '$lib/types';
 
-  let showCommandPalette = $state(false);
-  let contextMenu = $state<{ x: number; y: number; items: any[] } | null>(null);
+  $effect(() => {
+    const commands: PaletteCommand[] = [
+      { id: 'open-chat', title: 'Open Chat', description: 'AI-powered conversations', icon: MessageSquare, category: 'app', action: () => windowStore.open('chat') },
+      { id: 'open-files', title: 'Open Files', description: 'Browse and manage files', icon: Folder, category: 'app', action: () => windowStore.open('files') },
+      { id: 'open-terminal', title: 'Open Terminal', description: 'Command line interface', icon: Terminal, category: 'app', action: () => windowStore.open('terminal') },
+      { id: 'open-settings', title: 'Open Settings', description: 'System preferences', icon: Settings, category: 'app', action: () => windowStore.open('settings') },
+      { id: 'open-search', title: 'Open Search', description: 'Spotlight search', icon: Search, category: 'app', action: () => windowStore.open('search') },
+      { id: 'close-win', title: 'Close Window', description: 'Close the active window', category: 'action', shortcut: '⌘W', action: () => { const aw = windowStore.activeWindow; if (aw) windowStore.close(aw.id); } },
+      { id: 'min-win', title: 'Minimize Window', description: 'Minimize the active window', category: 'action', action: () => { const aw = windowStore.activeWindow; if (aw) windowStore.minimize(aw.id); } },
+      { id: 'max-win', title: 'Maximize Window', description: 'Maximize the active window', category: 'action', action: () => { const aw = windowStore.activeWindow; if (aw) windowStore.maximize(aw.id); } },
+      { id: 'tile-left', title: 'Tile Left', description: 'Snap window to left half', icon: Layout, category: 'action', action: () => { const aw = windowStore.activeWindow; if (aw) windowStore.snap(aw.id, 'left'); } },
+      { id: 'tile-right', title: 'Tile Right', description: 'Snap window to right half', icon: Layout, category: 'action', action: () => { const aw = windowStore.activeWindow; if (aw) windowStore.snap(aw.id, 'right'); } },
+      { id: 'toggle-launcher', title: 'Toggle App Launcher', description: 'Show or hide the app grid', icon: Sparkles, category: 'action', action: () => desktopState.toggleLauncher() },
+      { id: 'about', title: 'About Elysium', description: 'System information', icon: Info, category: 'setting', action: () => notificationStore.push({ type: 'info', title: 'Elysium AI OS', message: 'Version 1.0 — A futuristic desktop experience' }) }
+    ];
+    commandPaletteStore.register(commands);
+  });
 
   function handleDesktopClick(e: MouseEvent) {
     const target = e.target as HTMLElement;
@@ -27,42 +50,39 @@
     const target = e.target as HTMLElement;
     if (!target.classList.contains('desktop-area')) return;
     e.preventDefault();
-    contextMenu = {
-      x: e.clientX,
-      y: e.clientY,
-      items: [
-        {
-          label: 'New Chat',
-          icon: MessageSquare,
-          action: () => {
-            chatStore.createConversation();
-            windowStore.open('chat');
-          },
-        },
-        {
-          label: 'Open Terminal',
-          icon: Terminal,
-          action: () => windowStore.open('terminal'),
-        },
-        { separator: true },
-        {
-          label: 'Settings',
-          icon: Settings,
-          action: () => windowStore.open('settings'),
-        },
-      ],
-    };
+    contextMenuStore.open(e.clientX, e.clientY, [
+      { id: 'new-win', label: 'New Window', icon: MessageSquare, action: () => windowStore.open('chat') },
+      { id: 'sep1', label: '', separator: true, action: () => {} },
+      { id: 'refresh', label: 'Refresh Desktop', icon: RefreshCw, action: () => notificationStore.push({ type: 'success', title: 'Desktop Refreshed', duration: 2000 }) },
+      { id: 'sep2', label: '', separator: true, action: () => {} },
+      { id: 'display', label: 'Display Settings', icon: Monitor, action: () => windowStore.open('settings') },
+      { id: 'about', label: 'About Elysium', icon: Info, action: () => notificationStore.push({ type: 'info', title: 'Elysium AI OS', message: 'Version 1.0 — A futuristic desktop experience' }) }
+    ]);
   }
 
   $effect(() => {
     function handleKeydown(e: KeyboardEvent) {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault();
-        showCommandPalette = !showCommandPalette;
+        commandPaletteStore.toggle();
       }
     }
     window.addEventListener('keydown', handleKeydown);
     return () => window.removeEventListener('keydown', handleKeydown);
+  });
+
+  let welcomeShown = false;
+  $effect(() => {
+    if (welcomeShown) return;
+    welcomeShown = true;
+    setTimeout(() => {
+      notificationStore.push({
+        type: 'info',
+        title: 'Welcome to Elysium',
+        message: 'Press ⌘K to open the command palette',
+        duration: 6000
+      });
+    }, 500);
   });
 </script>
 
@@ -71,6 +91,7 @@
 <div class="desktop" onclick={handleDesktopClick} oncontextmenu={handleDesktopContextMenu}>
   <Wallpaper />
   <div class="desktop-area"></div>
+  <SnapZone />
   <WindowManager />
 
   {#if windowStore.snapPreview}
@@ -89,20 +110,9 @@
   <TopBar />
   <Dock />
   <AppLauncher />
-
-  <CommandPalette
-    visible={showCommandPalette}
-    onclose={() => (showCommandPalette = false)}
-  />
-
-  {#if contextMenu}
-    <ContextMenu
-      x={contextMenu.x}
-      y={contextMenu.y}
-      items={contextMenu.items}
-      onclose={() => (contextMenu = null)}
-    />
-  {/if}
+  <ContextMenu />
+  <CommandPalette />
+  <NotificationToast />
 </div>
 
 <style>
