@@ -1,78 +1,57 @@
-# NanoClaw Bot
+# Elysium AI OS
 
-Telegram bot for remote AI agent configuration and management. Designed for Termux (Android) and Linux.
+A browser-based AI workspace with a desktop OS interface. Multi-model AI chat with support for OpenAI, Anthropic, Google, xAI, and Groq.
 
-## One-Tap Setup (Termux / Linux)
+> ⚠️ **Alpha Software** — Many features shown in the UI are under active development and not yet functional.
 
-```bash
-curl -sSL https://raw.githubusercontent.com/muffy86/autogen-api-style-agent/main/setup.sh | bash
-```
+## Stack
 
-Or clone and run manually:
+- **Frontend:** SvelteKit 2, Svelte 5, Tailwind CSS 4
+- **AI:** Vercel AI SDK v6 (OpenAI, Anthropic, Google, xAI, Groq)
+- **Deployment:** Vercel
 
-```bash
-git clone https://github.com/muffy86/autogen-api-style-agent.git
-cd autogen-api-style-agent
-bash setup.sh
-```
-
-## Manual Setup
-
-1. Create a Telegram bot via [@BotFather](https://t.me/BotFather)
-2. Get your chat ID via [@userinfobot](https://t.me/userinfobot)
-3. Clone and install:
+## Quick Start
 
 ```bash
 git clone https://github.com/muffy86/autogen-api-style-agent.git
 cd autogen-api-style-agent
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -e .
+pnpm install
+cp .env.example .env  # Add your API keys
+pnpm dev
 ```
 
-4. Configure:
-
-```bash
-cp .env.example .env
-# Edit .env with your bot token and chat ID
-```
-
-5. Run:
-
-```bash
-python -m nanoclaw_bot
-```
-
-6. Message your bot: `/configure OPENAI_API_KEY=sk-...`
-
-## Commands
-
-| Command | Description |
-|---------|-------------|
-| `/start` | Welcome + quick-start instructions |
-| `/configure KEY=val ...` | Set API keys securely |
-| `/keys` | View configured keys (masked) |
-| `/status` | System health check |
-| `/agents` | List running agent sessions |
-| `/agents start <name> <cmd>` | Start an agent in tmux |
-| `/agents stop <name>` | Stop an agent |
-| `/agents restart <name> <cmd>` | Restart an agent |
-| `/agents logs <name>` | View agent output |
-| `/help` | Full command reference |
-
-## Agent Management
-
-Agents run in isolated tmux sessions. Start any process as an agent:
+## Environment Variables
 
 ```
-/agents start mybot python my_agent.py
-/agents start webserver npm start
-/agents logs mybot
-/agents stop mybot
+OPENAI_API_KEY=sk-...
+ANTHROPIC_API_KEY=sk-ant-...
+GOOGLE_GENERATIVE_AI_API_KEY=...
+XAI_API_KEY=...
+GROQ_API_KEY=gsk_...
 ```
 
-## Security
+## What Works
 
-- All commands restricted to configured owner chat ID
-- API keys stored in `.env` with 0600 permissions
-- Bot rejects ALL messages when owner ID is not configured
+- ✅ Multi-model AI chat with streaming (7 models, 5 providers)
+- ✅ Desktop window manager (drag, resize, minimize, maximize)
+- ✅ Conversation management with model selection
+- ✅ Markdown rendering with syntax highlighting
+
+## Under Development
+
+- 🚧 File management (currently static mockup)
+- 🚧 Terminal (currently static mockup)
+- 🚧 Search (UI only, no backend)
+- 🚧 Settings — API Keys, Privacy, Models sections
+- 🚧 Dashboard automations and workflows
+- 🚧 Real integrations (GitHub, Notion, Slack, etc.)
+- 🚧 Authentication and user accounts
+- 🚧 Database persistence (currently localStorage only)
+
+## NanoClaw Bot (Telegram)
+
+A separate Python Telegram bot for remote agent management lives in `src/nanoclaw_bot/`. See [NanoClaw Bot docs](docs/nanoclaw-bot.md) for setup instructions.
+
+## License
+
+MIT

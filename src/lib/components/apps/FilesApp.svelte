@@ -51,6 +51,9 @@
     </div>
   </div>
   <div class="main">
+    <div class="dev-banner">
+      <span>📁 File management is under development — showing sample data</span>
+    </div>
     <div class="toolbar">
       <div class="search-box">
         <Search size={14} />
@@ -172,6 +175,15 @@
     display: flex;
     flex-direction: column;
     min-width: 0;
+  }
+
+  .dev-banner {
+    padding: 6px 16px;
+    background: rgba(245, 158, 11, 0.1);
+    border-bottom: 1px solid rgba(245, 158, 11, 0.2);
+    font-size: 11px;
+    color: #f59e0b;
+    text-align: center;
   }
 
   .toolbar {
