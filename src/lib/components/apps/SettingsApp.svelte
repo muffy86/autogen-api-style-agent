@@ -119,7 +119,7 @@
         <div class="about-card">
           <div class="about-logo">✦</div>
           <h4>Elysium AI OS</h4>
-          <p class="version">Version 1.0.0</p>
+          <p class="version">Version 0.1.0-alpha</p>
           <p class="about-desc">A next-generation AI-powered operating system interface. Built with SvelteKit, designed for the future.</p>
         </div>
       </div>

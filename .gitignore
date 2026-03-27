@@ -86,3 +86,11 @@ __marimo__/
 # Vite
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+
+# Python build artifacts
+*.egg-info/
+__pycache__/
+*.pyc
+dist/
+build/
+.venv/

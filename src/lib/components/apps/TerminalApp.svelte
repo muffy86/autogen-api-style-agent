@@ -32,6 +32,9 @@ drwxr-xr-x  8 elysium  ai-os   256 Mar 22 10:30 knowledge-base
 </script>
 
 <div class="terminal">
+  <div class="dev-banner">
+    <span>🖥️ Terminal is under development — showing sample output</span>
+  </div>
   <div class="terminal-output scrollbar-thin">
     {#each history as entry}
       <div class="line">
@@ -62,6 +65,16 @@ drwxr-xr-x  8 elysium  ai-os   256 Mar 22 10:30 knowledge-base
     font-family: 'JetBrains Mono', 'Fira Code', 'SF Mono', 'Cascadia Code', monospace;
     font-size: 13px;
     line-height: 1.6;
+  }
+
+  .dev-banner {
+    padding: 6px 16px;
+    background: rgba(245, 158, 11, 0.1);
+    border-bottom: 1px solid rgba(245, 158, 11, 0.2);
+    font-size: 11px;
+    color: #f59e0b;
+    text-align: center;
+    flex-shrink: 0;
   }
 
   .terminal-output {

@@ -1,53 +1,62 @@
 [build-system]
-requires = ["setuptools>=61.0", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [project]
 name = "autogen-api-style-agent"
 version = "0.1.0"
-description = "Multi-agent AI productivity system powered by AutoGen with 6 LLM providers"
+description = "Maxed-out multi-agent productivity system with 6+ LLM providers, MCP, and OpenAI-compatible API"
 readme = "README.md"
-license = {text = "MIT"}
+license = "MIT"
 requires-python = ">=3.10"
-authors = [
-    {name = "muffy86"}
-]
+authors = [{ name = "muffy86" }]
+keywords = ["autogen", "openai", "agents", "llm", "multi-agent", "mcp", "productivity"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
-    "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
 ]
+
 dependencies = [
     "autogen-agentchat==0.7.5",
-    "autogen-ext[openai]==0.7.5",
+    "autogen-ext[openai,gemini,mcp,web-surfer,file-surfer,rich]==0.7.5",
+    "autogen-core==0.7.5",
     "fastapi>=0.115.0",
-    "uvicorn[standard]>=0.32.0",
+    "uvicorn[standard]>=0.34.0",
+    "pydantic>=2.0.0",
+    "pydantic-settings>=2.0.0",
     "typer[all]>=0.15.0",
-    "pydantic-settings>=2.6.0",
-    "python-dotenv>=1.0.0",
     "httpx>=0.28.0",
-    "mcp>=1.0.0",
+    "python-dotenv>=1.0.0",
+    "rich>=13.0.0",
+    "sse-starlette>=2.0.0",
+    "duckduckgo-search>=7.0.0",
+    "PyGithub>=2.0.0",
 ]
 
 [project.optional-dependencies]
-google = ["autogen-ext[gemini]==0.7.5"]
 dev = [
-    "autogen-ext[gemini]==0.7.5",
-    "pytest>=8.0",
-    "pytest-asyncio>=0.24",
-    "pytest-cov>=6.0",
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.24.0",
     "ruff>=0.8.0",
+    "mypy>=1.0.0",
+]
+all = [
+    "autogen-ext[anthropic,docker,magentic-one]==0.7.5",
 ]
 
 [project.scripts]
 agent = "autogen_api_agent.cli:app"
 
-[tool.setuptools.packages.find]
-where = ["src"]
+[project.urls]
+Homepage = "https://github.com/muffy86/autogen-api-style-agent"
+Repository = "https://github.com/muffy86/autogen-api-style-agent"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/autogen_api_agent"]
 
 [tool.ruff]
 target-version = "py310"
@@ -57,5 +66,5 @@ line-length = 100
 select = ["E", "F", "I", "N", "UP", "B", "SIM"]
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
 asyncio_mode = "auto"
+testpaths = ["tests"]
