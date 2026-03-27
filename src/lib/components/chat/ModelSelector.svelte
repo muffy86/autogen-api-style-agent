@@ -9,8 +9,9 @@
     AVAILABLE_MODELS.find(m => m.id === chatStore.selectedModel) ?? AVAILABLE_MODELS[0]
   );
 
-  const providerOrder = ['openai', 'anthropic', 'google', 'xai', 'groq'] as const;
+  const providerOrder = ['openrouter', 'groq', 'openai', 'anthropic', 'google', 'xai'] as const;
   const providerLabels: Record<string, string> = {
+    openrouter: 'OpenRouter',
     openai: 'OpenAI',
     anthropic: 'Anthropic',
     google: 'Google',
@@ -20,7 +21,9 @@
 
   let grouped = $derived.by(() => {
     const groups: Record<string, typeof AVAILABLE_MODELS> = {};
+    const allowPaid = chatStore.allowPaid;
     for (const m of AVAILABLE_MODELS) {
+      if (!allowPaid && m.tier === 'paid') continue;
       if (!groups[m.provider]) groups[m.provider] = [];
       groups[m.provider].push(m);
     }
@@ -72,10 +75,21 @@
                 <span class="option-name">{model.name}</span>
                 <span class="option-desc">{model.description}</span>
               </div>
+              {#if model.tier === 'paid'}
+                <span class="tier-badge paid">Paid</span>
+              {:else}
+                <span class="tier-badge free">Free</span>
+              {/if}
             </button>
           {/each}
         </div>
       {/each}
+      <div class="footer">
+        <label class="toggle">
+          <input type="checkbox" checked={chatStore.allowPaid} onchange={(e) => chatStore.setAllowPaid((e.target as HTMLInputElement).checked)} />
+          <span>Allow paid models</span>
+        </label>
+      </div>
     </div>
   {/if}
 </div>
@@ -177,6 +191,7 @@
     text-align: left;
     font-family: inherit;
     transition: background var(--transition-fast);
+    position: relative;
   }
 
   .model-option:hover {
@@ -198,6 +213,7 @@
     display: flex;
     flex-direction: column;
     min-width: 0;
+    flex: 1;
   }
 
   .option-name {
@@ -212,5 +228,39 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+
+  .tier-badge {
+    font-size: 9px;
+    padding: 2px 6px;
+    border-radius: 10px;
+    border: 1px solid var(--border-subtle);
+    color: var(--text-muted);
+  }
+  .tier-badge.free {
+    background: rgba(16, 185, 129, 0.08);
+    border-color: rgba(16, 185, 129, 0.25);
+    color: #10b981;
+  }
+  .tier-badge.paid {
+    background: rgba(59, 130, 246, 0.08);
+    border-color: rgba(59, 130, 246, 0.25);
+    color: #3b82f6;
+  }
+
+  .footer {
+    margin-top: 6px;
+    padding: 6px 8px 4px;
+    border-top: 1px solid var(--border-subtle);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    color: var(--text-secondary);
   }
 </style>
