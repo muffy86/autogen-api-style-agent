@@ -1,7 +1,9 @@
 <script lang="ts">
-  import { Monitor, Palette, Shield, Info, Cpu, Key } from 'lucide-svelte';
+  import { Monitor, Palette, Shield, Info, Cpu, Key, Plug, Plus, Trash2, Wifi, WifiOff, ToggleLeft, ToggleRight } from 'lucide-svelte';
   import { themeStore } from '$lib/stores/theme.svelte';
   import { notificationStore } from '$lib/stores/notifications.svelte';
+  import { mcpStore } from '$lib/stores/mcp.svelte';
+  import { memoryStore } from '$lib/stores/memory.svelte';
 
   let selectedSection = $state('appearance');
 
@@ -10,12 +12,32 @@
     { id: 'appearance', name: 'Appearance', icon: Palette },
     { id: 'models', name: 'AI Models', icon: Cpu },
     { id: 'apikeys', name: 'API Keys', icon: Key },
+    { id: 'mcp', name: 'MCP Servers', icon: Plug },
     { id: 'privacy', name: 'Privacy', icon: Shield },
     { id: 'about', name: 'About', icon: Info }
   ];
 
   let selectedTheme = $derived(themeStore.theme);
   let selectedAccent = $derived(themeStore.accentColor);
+
+  let mcpName = $state('');
+  let mcpUrl = $state('');
+  let mcpDesc = $state('');
+  let mcpTesting = $state<string | null>(null);
+
+  function addMcpServer() {
+    if (!mcpName.trim() || !mcpUrl.trim()) return;
+    mcpStore.addServer(mcpName.trim(), mcpUrl.trim(), mcpDesc.trim());
+    mcpName = '';
+    mcpUrl = '';
+    mcpDesc = '';
+  }
+
+  async function testMcpServer(id: string) {
+    mcpTesting = id;
+    await mcpStore.testConnection(id);
+    mcpTesting = null;
+  }
 
   const accentColors = [
     { name: 'Violet', value: '#8b5cf6' },
@@ -112,6 +134,114 @@
             {/each}
           </div>
         </div>
+      </div>
+    {:else if selectedSection === 'mcp'}
+      <div class="section">
+        <h3 class="section-title">MCP Servers</h3>
+        <p class="section-desc">Configure Model Context Protocol servers for extended tool capabilities.</p>
+
+        <div class="setting-group">
+          <span class="setting-label">Add Server</span>
+          <div class="mcp-form">
+            <input class="mcp-input" type="text" placeholder="Server name" bind:value={mcpName} />
+            <input class="mcp-input" type="url" placeholder="https://example.com/mcp" bind:value={mcpUrl} />
+            <input class="mcp-input" type="text" placeholder="Description (optional)" bind:value={mcpDesc} />
+            <button class="mcp-add-btn" onclick={addMcpServer} disabled={!mcpName.trim() || !mcpUrl.trim()}>
+              <Plus size={14} />
+              Add Server
+            </button>
+          </div>
+        </div>
+
+        <div class="setting-group">
+          <span class="setting-label">Configured Servers</span>
+          {#if mcpStore.servers.length === 0}
+            <p class="mcp-empty">No MCP servers configured yet. Add one above to extend Elysium's capabilities.</p>
+          {:else}
+            <div class="mcp-list">
+              {#each mcpStore.servers as server}
+                <div class="mcp-card">
+                  <div class="mcp-card-header">
+                    <div class="mcp-card-info">
+                      <span class="mcp-card-name">{server.name}</span>
+                      <span class="mcp-card-url">{server.url}</span>
+                      {#if server.description}
+                        <span class="mcp-card-desc">{server.description}</span>
+                      {/if}
+                    </div>
+                    <div class="mcp-card-status">
+                      {#if server.status === 'connected'}
+                        <span class="status-badge connected"><Wifi size={10} /> Connected</span>
+                      {:else if server.status === 'error'}
+                        <span class="status-badge error"><WifiOff size={10} /> Error</span>
+                      {:else}
+                        <span class="status-badge unknown">Unknown</span>
+                      {/if}
+                    </div>
+                  </div>
+                  <div class="mcp-card-actions">
+                    <button class="mcp-action-btn" onclick={() => mcpStore.toggleServer(server.id)}>
+                      {#if server.enabled}
+                        <ToggleRight size={16} />
+                        <span>Enabled</span>
+                      {:else}
+                        <ToggleLeft size={16} />
+                        <span>Disabled</span>
+                      {/if}
+                    </button>
+                    <button class="mcp-action-btn" onclick={() => testMcpServer(server.id)} disabled={mcpTesting === server.id}>
+                      <Wifi size={13} />
+                      {mcpTesting === server.id ? 'Testing...' : 'Test'}
+                    </button>
+                    <button class="mcp-action-btn danger" onclick={() => mcpStore.removeServer(server.id)}>
+                      <Trash2 size={13} />
+                      Remove
+                    </button>
+                  </div>
+                </div>
+              {/each}
+            </div>
+          {/if}
+        </div>
+      </div>
+    {:else if selectedSection === 'privacy'}
+      <div class="section">
+        <h3 class="section-title">Privacy & Memory</h3>
+        <p class="section-desc">Manage AI memory and data preferences.</p>
+
+        <div class="setting-group">
+          <span class="setting-label">AI Memory</span>
+          <p class="setting-hint">When enabled, the AI can save important facts about you across conversations.</p>
+          <button class="toggle-btn" class:active={memoryStore.enabled} onclick={() => memoryStore.toggleEnabled()}>
+            {#if memoryStore.enabled}
+              <ToggleRight size={18} />
+              <span>Memory Enabled</span>
+            {:else}
+              <ToggleLeft size={18} />
+              <span>Memory Disabled</span>
+            {/if}
+          </button>
+        </div>
+
+        {#if memoryStore.memories.length > 0}
+          <div class="setting-group">
+            <span class="setting-label">Stored Memories ({memoryStore.memories.length})</span>
+            <div class="memory-list">
+              {#each memoryStore.memories as mem}
+                <div class="memory-item">
+                  <span class="memory-content">{mem.content}</span>
+                  <div class="memory-meta">
+                    <span class="memory-importance">{'★'.repeat(mem.importance)}{'☆'.repeat(5 - mem.importance)}</span>
+                    <button class="memory-delete" onclick={() => memoryStore.remove(mem.id)}>
+                      <Trash2 size={11} />
+                    </button>
+                  </div>
+                </div>
+              {/each}
+            </div>
+            <button class="clear-memory-btn" onclick={() => memoryStore.clear()}>Clear All Memories</button>
+          </div>
+        {/if}
       </div>
     {:else if selectedSection === 'about'}
       <div class="section">
@@ -365,5 +495,272 @@
 
   .placeholder-row.shorter {
     width: 50%;
+  }
+
+  .mcp-form {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .mcp-input {
+    padding: 8px 12px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-subtle);
+    background: var(--bg-surface);
+    color: var(--text-primary);
+    font-size: 13px;
+    outline: none;
+    transition: border-color var(--transition-fast);
+  }
+
+  .mcp-input:focus {
+    border-color: var(--accent);
+  }
+
+  .mcp-input::placeholder {
+    color: var(--text-muted);
+  }
+
+  .mcp-add-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--accent);
+    background: var(--accent-subtle);
+    color: var(--accent-glow);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    align-self: flex-start;
+  }
+
+  .mcp-add-btn:hover:not(:disabled) {
+    background: rgba(139, 92, 246, 0.25);
+  }
+
+  .mcp-add-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  .mcp-empty {
+    font-size: 13px;
+    color: var(--text-muted);
+    font-style: italic;
+  }
+
+  .mcp-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .mcp-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm);
+    padding: 12px;
+  }
+
+  .mcp-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 10px;
+  }
+
+  .mcp-card-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    flex: 1;
+  }
+
+  .mcp-card-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  .mcp-card-url {
+    font-size: 11px;
+    color: var(--text-muted);
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .mcp-card-desc {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-top: 2px;
+  }
+
+  .status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    white-space: nowrap;
+  }
+
+  .status-badge.connected {
+    background: rgba(16, 185, 129, 0.1);
+    color: #10b981;
+  }
+
+  .status-badge.error {
+    background: rgba(244, 63, 94, 0.1);
+    color: #f43f5e;
+  }
+
+  .status-badge.unknown {
+    background: var(--bg-surface-hover);
+    color: var(--text-muted);
+  }
+
+  .mcp-card-actions {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .mcp-action-btn {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 10px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-subtle);
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 11px;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+  }
+
+  .mcp-action-btn:hover:not(:disabled) {
+    background: var(--bg-surface-hover);
+    color: var(--text-primary);
+  }
+
+  .mcp-action-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .mcp-action-btn.danger:hover {
+    border-color: rgba(244, 63, 94, 0.3);
+    color: #f43f5e;
+    background: rgba(244, 63, 94, 0.05);
+  }
+
+  .setting-hint {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+    line-height: 1.5;
+  }
+
+  .toggle-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-subtle);
+    background: var(--bg-surface);
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 13px;
+    transition: all var(--transition-fast);
+  }
+
+  .toggle-btn:hover {
+    background: var(--bg-surface-hover);
+  }
+
+  .toggle-btn.active {
+    border-color: rgba(16, 185, 129, 0.3);
+    color: #10b981;
+  }
+
+  .memory-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 12px;
+  }
+
+  .memory-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 8px 12px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm);
+  }
+
+  .memory-content {
+    font-size: 12px;
+    color: var(--text-secondary);
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .memory-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  .memory-importance {
+    font-size: 10px;
+    color: #f59e0b;
+    letter-spacing: 1px;
+  }
+
+  .memory-delete {
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 2px;
+    display: flex;
+    transition: color var(--transition-fast);
+  }
+
+  .memory-delete:hover {
+    color: #f43f5e;
+  }
+
+  .clear-memory-btn {
+    padding: 6px 14px;
+    border-radius: var(--radius-sm);
+    border: 1px solid rgba(244, 63, 94, 0.3);
+    background: transparent;
+    color: #f43f5e;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+  }
+
+  .clear-memory-btn:hover {
+    background: rgba(244, 63, 94, 0.1);
   }
 </style>
