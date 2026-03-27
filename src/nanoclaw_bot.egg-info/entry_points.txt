@@ -1,0 +1,2 @@
+[console_scripts]
+nanoclaw-bot = nanoclaw_bot.__main__:main

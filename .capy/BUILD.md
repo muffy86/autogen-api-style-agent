@@ -1,0 +1,5 @@
+- Follow PEP 8 style guidelines
+- Use type hints on function signatures and return types where practical
+- Use `pytest` for all tests; place tests in a `tests/` directory
+- Keep modules small and focused; prefer composition over inheritance
+- Run `pytest` to verify changes before finishing
