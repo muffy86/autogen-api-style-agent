@@ -13,12 +13,22 @@
     { id: 'dashboard', name: 'Dashboard', icon: LayoutDashboard, isLauncher: false }
   ];
 
+  let bouncingApp = $state<string | null>(null);
+  let hoveredApp = $state<string | null>(null);
+
   function handleClick(app: (typeof dockApps)[number]) {
     if (app.isLauncher) {
       desktopState.toggleLauncher();
     } else {
       desktopState.closeLauncher();
+
+      const wasOpen = windowStore.hasOpenWindow(app.id);
       windowStore.open(app.id);
+
+      if (!wasOpen) {
+        bouncingApp = app.id;
+        setTimeout(() => (bouncingApp = null), 600);
+      }
     }
   }
 </script>
@@ -32,11 +42,15 @@
         class:active={isActive}
         aria-label={app.name}
         onclick={() => handleClick(app)}
+        onmouseenter={() => (hoveredApp = app.id)}
+        onmouseleave={() => (hoveredApp = null)}
       >
-        <div class="dock-icon">
+        <div class="dock-icon" class:bouncing={bouncingApp === app.id}>
           <app.icon size={24} strokeWidth={1.5} />
         </div>
-        <span class="dock-label">{app.name}</span>
+        {#if hoveredApp === app.id}
+          <div class="dock-tooltip">{app.name}</div>
+        {/if}
         {#if isActive}
           <div class="dock-indicator"></div>
         {/if}
@@ -82,9 +96,9 @@
     background: var(--bg-surface-hover);
   }
 
-  .dock-item:hover .dock-icon {
+  .dock-item:hover .dock-icon:not(.bouncing) {
     transform: scale(1.2) translateY(-2px);
-    filter: drop-shadow(0 0 8px rgba(139, 92, 246, 0.4));
+    filter: drop-shadow(0 0 8px var(--accent-subtle));
   }
 
   .dock-icon {
@@ -96,15 +110,29 @@
     transition: all var(--transition-smooth);
   }
 
-  .dock-label {
-    font-size: 10px;
-    opacity: 0.7;
-    transition: opacity var(--transition-fast);
-    white-space: nowrap;
+  .dock-icon.bouncing {
+    animation: dockBounce 600ms cubic-bezier(0.36, 0, 0.66, -0.56) forwards;
   }
 
-  .dock-item:hover .dock-label {
-    opacity: 1;
+  .dock-tooltip {
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    margin-bottom: 8px;
+    padding: 4px 10px;
+    border-radius: 6px;
+    background: var(--glass-bg);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--glass-border);
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-primary);
+    white-space: nowrap;
+    pointer-events: none;
+    animation: fadeIn 120ms ease-out;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
   }
 
   .dock-indicator {

@@ -9,7 +9,7 @@
   import DashboardApp from '$lib/components/apps/DashboardApp.svelte';
   import type { Component } from 'svelte';
 
-  const appComponents: Record<string, Component> = {
+  const appComponents: Record<string, any> = {
     chat: ChatApp,
     files: FilesApp,
     terminal: TerminalApp,
@@ -18,7 +18,7 @@
     dashboard: DashboardApp
   };
 
-  function getComponent(appId: string): Component {
+  function getComponent(appId: string): any {
     return appComponents[appId] ?? ChatApp;
   }
 </script>

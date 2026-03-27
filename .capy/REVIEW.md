@@ -1,0 +1,5 @@
+- Verify proper error handling: no bare `except`, use specific exception types
+- Check type annotations are present and consistent
+- Look for security issues: validate and sanitize all external inputs
+- Ensure new code has corresponding test coverage
+- Flag any hardcoded secrets or credentials
