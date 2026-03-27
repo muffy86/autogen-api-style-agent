@@ -1,10 +1,14 @@
 <script lang="ts">
-  import { Wifi, Volume2, Battery, Sparkles, Bell } from 'lucide-svelte';
+  import { Wifi, Volume2, Battery, Sparkles, Bell, LogOut } from 'lucide-svelte';
   import { contextMenuStore } from '$lib/stores/contextmenu.svelte';
   import { windowStore } from '$lib/stores/windows.svelte';
   import { desktopState } from '$lib/stores/desktop.svelte';
   import { commandPaletteStore } from '$lib/stores/commandpalette.svelte';
   import { notificationStore } from '$lib/stores/notifications.svelte';
+  import { createSupabaseBrowserClient } from '$lib/supabase/client';
+  import { goto } from '$app/navigation';
+
+  const supabase = createSupabaseBrowserClient();
 
   let hours = $state('');
   let minutes = $state('');
@@ -97,8 +101,8 @@
           { id: 'min', label: 'Minimize', shortcut: '⌘M', disabled: !aw, action: () => aw && windowStore.minimize(aw.id) },
           { id: 'max', label: 'Maximize', disabled: !aw, action: () => aw && windowStore.maximize(aw.id) },
           { id: 'sep1', label: '', separator: true, action: () => {} },
-          { id: 'tile-l', label: 'Tile Left', disabled: !aw, action: () => { if (!aw) return; windowStore.snapPreview = { region: 'left', bounds: { x: 0, y: 36, width: window.innerWidth / 2, height: window.innerHeight - 116 } }; windowStore.applySnap(aw.id); } },
-          { id: 'tile-r', label: 'Tile Right', disabled: !aw, action: () => { if (!aw) return; windowStore.snapPreview = { region: 'right', bounds: { x: window.innerWidth / 2, y: 36, width: window.innerWidth / 2, height: window.innerHeight - 116 } }; windowStore.applySnap(aw.id); } },
+          { id: 'tile-l', label: 'Tile Left', disabled: !aw, action: () => { if (aw) windowStore.snap(aw.id, 'left'); } },
+          { id: 'tile-r', label: 'Tile Right', disabled: !aw, action: () => { if (aw) windowStore.snap(aw.id, 'right'); } },
           { id: 'sep2', label: '', separator: true, action: () => {} },
           { id: 'close-all', label: 'Close All', danger: true, action: () => windowStore.closeAll() }
         ];
@@ -115,6 +119,11 @@
   }
 
   let notifCount = $derived(notificationStore.notifications.length);
+
+  async function handleLogout() {
+    await supabase.auth.signOut();
+    goto('/login');
+  }
 </script>
 
 <div class="topbar glass">
@@ -148,6 +157,9 @@
       <Volume2 size={14} />
       <Battery size={14} />
     </div>
+    <button class="logout-btn" onclick={handleLogout} aria-label="Sign out">
+      <LogOut size={13} strokeWidth={2} />
+    </button>
     <div class="clock">
       <span class="clock-date">{dayStr}</span>
       <span class="clock-time">{hours}:{minutes}</span>
@@ -273,6 +285,25 @@
     align-items: center;
     justify-content: center;
     line-height: 1;
+  }
+
+  .logout-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    border-radius: 6px;
+    transition: all var(--transition-fast);
+  }
+
+  .logout-btn:hover {
+    background: rgba(239, 68, 68, 0.15);
+    color: #ef4444;
   }
 
   .clock {

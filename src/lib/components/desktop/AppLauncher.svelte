@@ -2,15 +2,15 @@
   import { desktopState } from '$lib/stores/desktop.svelte';
   import { windowStore } from '$lib/stores/windows.svelte';
   import { appRegistry } from '$lib/stores/apps.svelte';
-  import { MessageSquare, Folder, Terminal, Settings, Search } from 'lucide-svelte';
-  import type { Component } from 'svelte';
+  import { MessageSquare, Folder, Terminal, Settings, Search, LayoutDashboard } from 'lucide-svelte';
 
   const iconMap: Record<string, any> = {
     'message-square': MessageSquare,
     folder: Folder,
     terminal: Terminal,
     settings: Settings,
-    search: Search
+    search: Search,
+    'layout-dashboard': LayoutDashboard
   };
 
   function launchApp(appId: string) {

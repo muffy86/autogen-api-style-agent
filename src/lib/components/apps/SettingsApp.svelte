@@ -1,5 +1,7 @@
 <script lang="ts">
   import { Monitor, Palette, Shield, Info, Cpu, Key } from 'lucide-svelte';
+  import { themeStore } from '$lib/stores/theme.svelte';
+  import { notificationStore } from '$lib/stores/notifications.svelte';
 
   let selectedSection = $state('appearance');
 
@@ -12,8 +14,8 @@
     { id: 'about', name: 'About', icon: Info }
   ];
 
-  let selectedTheme = $state('dark');
-  let selectedAccent = $state('#8b5cf6');
+  let selectedTheme = $derived(themeStore.theme);
+  let selectedAccent = $derived(themeStore.accentColor);
 
   const accentColors = [
     { name: 'Violet', value: '#8b5cf6' },
@@ -29,6 +31,15 @@
     { name: 'Aurora', color: 'linear-gradient(135deg, #0a1a0f, #0a0a1a)' },
     { name: 'Sunset', color: 'linear-gradient(135deg, #1a0f0a, #0a0a1a)' }
   ];
+
+  function handleThemeChange(theme: string) {
+    themeStore.setTheme(theme as 'dark' | 'light' | 'system');
+    notificationStore.push({ type: 'success', title: 'Theme Changed', message: `Switched to ${theme} theme`, duration: 3000 });
+  }
+
+  function handleAccentChange(value: string) {
+    themeStore.setAccent(value);
+  }
 </script>
 
 <div class="settings-layout">
@@ -62,13 +73,9 @@
               <button
                 class="theme-btn"
                 class:active={selectedTheme === theme}
-                onclick={() => (selectedTheme = theme)}
-                disabled={theme !== 'dark'}
+                onclick={() => handleThemeChange(theme)}
               >
                 {theme.charAt(0).toUpperCase() + theme.slice(1)}
-                {#if theme !== 'dark'}
-                  <span class="coming-soon">Soon</span>
-                {/if}
               </button>
             {/each}
           </div>
@@ -82,7 +89,7 @@
                 class="color-swatch"
                 class:active={selectedAccent === color.value}
                 style="background: {color.value}"
-                onclick={() => (selectedAccent = color.value)}
+                onclick={() => handleAccentChange(color.value)}
                 aria-label={color.name}
               >
                 {#if selectedAccent === color.value}
@@ -233,9 +240,10 @@
     cursor: pointer;
     font-size: 13px;
     transition: all var(--transition-fast);
+    font-family: inherit;
   }
 
-  .theme-btn:hover:not(:disabled) {
+  .theme-btn:hover {
     border-color: var(--border-default);
     color: var(--text-primary);
   }
@@ -244,20 +252,6 @@
     border-color: var(--accent);
     color: var(--accent-glow);
     background: var(--accent-subtle);
-  }
-
-  .theme-btn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-
-  .coming-soon {
-    font-size: 9px;
-    background: var(--bg-surface-hover);
-    padding: 1px 5px;
-    border-radius: 4px;
-    margin-left: 6px;
-    color: var(--text-muted);
   }
 
   .color-options {

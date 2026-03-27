@@ -1,0 +1,4 @@
+- Empty Python project ready for development (autogen API style agent)
+- Uses `pip` with `requirements.txt` for dependency management
+- MIT licensed open source project
+- No existing application code, tests, or CI configuration yet

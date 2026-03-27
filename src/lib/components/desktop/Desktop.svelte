@@ -8,6 +8,7 @@
   import NotificationToast from './NotificationToast.svelte';
   import SnapZone from './SnapZone.svelte';
   import WindowManager from '$lib/components/window/WindowManager.svelte';
+  import NotificationCenter from './NotificationCenter.svelte';
   import { windowStore } from '$lib/stores/windows.svelte';
   import { desktopState } from '$lib/stores/desktop.svelte';
   import { contextMenuStore } from '$lib/stores/contextmenu.svelte';
@@ -29,8 +30,8 @@
       { id: 'close-win', title: 'Close Window', description: 'Close the active window', category: 'action', shortcut: '⌘W', action: () => { const aw = windowStore.activeWindow; if (aw) windowStore.close(aw.id); } },
       { id: 'min-win', title: 'Minimize Window', description: 'Minimize the active window', category: 'action', action: () => { const aw = windowStore.activeWindow; if (aw) windowStore.minimize(aw.id); } },
       { id: 'max-win', title: 'Maximize Window', description: 'Maximize the active window', category: 'action', action: () => { const aw = windowStore.activeWindow; if (aw) windowStore.maximize(aw.id); } },
-      { id: 'tile-left', title: 'Tile Left', description: 'Snap window to left half', icon: Layout, category: 'action', action: () => { const aw = windowStore.activeWindow; if (aw) { windowStore.snapPreview = { region: 'left', bounds: { x: 0, y: 36, width: window.innerWidth / 2, height: window.innerHeight - 116 } }; windowStore.applySnap(aw.id); } } },
-      { id: 'tile-right', title: 'Tile Right', description: 'Snap window to right half', icon: Layout, category: 'action', action: () => { const aw = windowStore.activeWindow; if (aw) { windowStore.snapPreview = { region: 'right', bounds: { x: window.innerWidth / 2, y: 36, width: window.innerWidth / 2, height: window.innerHeight - 116 } }; windowStore.applySnap(aw.id); } } },
+      { id: 'tile-left', title: 'Tile Left', description: 'Snap window to left half', icon: Layout, category: 'action', action: () => { const aw = windowStore.activeWindow; if (aw) windowStore.snap(aw.id, 'left'); } },
+      { id: 'tile-right', title: 'Tile Right', description: 'Snap window to right half', icon: Layout, category: 'action', action: () => { const aw = windowStore.activeWindow; if (aw) windowStore.snap(aw.id, 'right'); } },
       { id: 'toggle-launcher', title: 'Toggle App Launcher', description: 'Show or hide the app grid', icon: Sparkles, category: 'action', action: () => desktopState.toggleLauncher() },
       { id: 'about', title: 'About Elysium', description: 'System information', icon: Info, category: 'setting', action: () => notificationStore.push({ type: 'info', title: 'Elysium AI OS', message: 'Version 1.0 — A futuristic desktop experience' }) }
     ];
@@ -92,6 +93,20 @@
   <div class="desktop-area"></div>
   <SnapZone />
   <WindowManager />
+
+  {#if windowStore.snapPreview}
+    <div
+      class="snap-preview"
+      style="
+        left: {windowStore.snapPreview.x}px;
+        top: {windowStore.snapPreview.y}px;
+        width: {windowStore.snapPreview.w}px;
+        height: {windowStore.snapPreview.h}px;
+      "
+    ></div>
+  {/if}
+
+  <NotificationCenter />
   <TopBar />
   <Dock />
   <AppLauncher />
@@ -112,5 +127,15 @@
     position: fixed;
     inset: 0;
     z-index: 1;
+  }
+
+  .snap-preview {
+    position: fixed;
+    z-index: 99;
+    background: var(--accent-subtle);
+    border: 2px dashed var(--accent);
+    border-radius: var(--radius-lg);
+    animation: snapPreviewIn 150ms ease-out forwards;
+    pointer-events: none;
   }
 </style>

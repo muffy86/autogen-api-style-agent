@@ -1,42 +1,78 @@
-# sv
+# NanoClaw Bot
 
-Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
+Telegram bot for remote AI agent configuration and management. Designed for Termux (Android) and Linux.
 
-## Creating a project
+## One-Tap Setup (Termux / Linux)
 
-If you're seeing this, you've probably already done this step. Congrats!
-
-```sh
-# create a new project
-npx sv create my-app
+```bash
+curl -sSL https://raw.githubusercontent.com/muffy86/autogen-api-style-agent/main/setup.sh | bash
 ```
 
-To recreate this project with the same configuration:
+Or clone and run manually:
 
-```sh
-# recreate this project
-npx sv@0.12.8 create --template minimal --types ts --no-install .
+```bash
+git clone https://github.com/muffy86/autogen-api-style-agent.git
+cd autogen-api-style-agent
+bash setup.sh
 ```
 
-## Developing
+## Manual Setup
 
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
+1. Create a Telegram bot via [@BotFather](https://t.me/BotFather)
+2. Get your chat ID via [@userinfobot](https://t.me/userinfobot)
+3. Clone and install:
 
-```sh
-npm run dev
-
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
+```bash
+git clone https://github.com/muffy86/autogen-api-style-agent.git
+cd autogen-api-style-agent
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -e .
 ```
 
-## Building
+4. Configure:
 
-To create a production version of your app:
-
-```sh
-npm run build
+```bash
+cp .env.example .env
+# Edit .env with your bot token and chat ID
 ```
 
-You can preview the production build with `npm run preview`.
+5. Run:
 
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
+```bash
+python -m nanoclaw_bot
+```
+
+6. Message your bot: `/configure OPENAI_API_KEY=sk-...`
+
+## Commands
+
+| Command | Description |
+|---------|-------------|
+| `/start` | Welcome + quick-start instructions |
+| `/configure KEY=val ...` | Set API keys securely |
+| `/keys` | View configured keys (masked) |
+| `/status` | System health check |
+| `/agents` | List running agent sessions |
+| `/agents start <name> <cmd>` | Start an agent in tmux |
+| `/agents stop <name>` | Stop an agent |
+| `/agents restart <name> <cmd>` | Restart an agent |
+| `/agents logs <name>` | View agent output |
+| `/help` | Full command reference |
+
+## Agent Management
+
+Agents run in isolated tmux sessions. Start any process as an agent:
+
+```
+/agents start mybot python my_agent.py
+/agents start webserver npm start
+/agents logs mybot
+/agents stop mybot
+```
+
+## Security
+
+- All commands restricted to configured owner chat ID
+- API keys stored in `.env` with 0600 permissions
+- Bot rejects ALL messages when owner ID is not configured

@@ -180,7 +180,6 @@
       const storeMsg = chatStore.activeConversation.messages.find(m => m.id === localId);
       if (storeMsg) {
         storeMsg.id = realId;
-        chatStore.save();
       }
     }
   }
@@ -325,7 +324,6 @@
         if (chatStore.activeConversation) {
           chat.messages = [];
           chatStore.activeConversation.messages = [];
-          chatStore.save();
         }
         inputValue = '';
         break;
@@ -423,6 +421,7 @@
           <ChatMessage
             role={msg.role === 'user' ? 'user' : 'assistant'}
             content={text}
+            parts={msg.parts}
             model={msg.role === 'assistant' ? chatStore.selectedModel : undefined}
             isStreaming={isStreamingMsg}
             isLastMessage={isLast}

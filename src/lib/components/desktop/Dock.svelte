@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Sparkles, MessageSquare, Folder, Terminal, Settings, Search } from 'lucide-svelte';
+  import { Sparkles, MessageSquare, Folder, Terminal, Settings, Search, LayoutDashboard } from 'lucide-svelte';
   import { windowStore } from '$lib/stores/windows.svelte';
   import { desktopState } from '$lib/stores/desktop.svelte';
   import { contextMenuStore } from '$lib/stores/contextmenu.svelte';
@@ -9,6 +9,7 @@
     { id: 'chat', name: 'Chat', icon: MessageSquare, isLauncher: false, group: 1 },
     { id: 'files', name: 'Files', icon: Folder, isLauncher: false, group: 1 },
     { id: 'terminal', name: 'Terminal', icon: Terminal, isLauncher: false, group: 1 },
+    { id: 'dashboard', name: 'Dashboard', icon: LayoutDashboard, isLauncher: false, group: 1 },
     { id: 'settings', name: 'Settings', icon: Settings, isLauncher: false, group: 2 },
     { id: 'search', name: 'Search', icon: Search, isLauncher: false, group: 2 }
   ];
@@ -16,6 +17,7 @@
   let mouseX = $state(-1000);
   let isHovering = $state(false);
   let tooltipApp = $state<string | null>(null);
+  let bouncingApp = $state<string | null>(null);
   let dockEl: HTMLDivElement | undefined = $state(undefined);
 
   const BASE_ITEM_WIDTH = 52;
@@ -63,7 +65,14 @@
       desktopState.toggleLauncher();
     } else {
       desktopState.closeLauncher();
+
+      const wasOpen = windowStore.hasOpenWindow(app.id);
       windowStore.open(app.id);
+
+      if (!wasOpen) {
+        bouncingApp = app.id;
+        setTimeout(() => (bouncingApp = null), 600);
+      }
     }
   }
 
@@ -117,7 +126,7 @@
           onmouseleave={() => (tooltipApp = null)}
           style="transform: perspective(800px) rotateX(-5deg) translateY(-{lift}px) scale({scale}); transition: transform {isHovering ? '150ms' : '400ms'} cubic-bezier(0.34, 1.56, 0.64, 1);"
         >
-          <div class="dock-icon" style="width: {iconSize}px; height: {iconSize}px;">
+          <div class="dock-icon" class:bouncing={bouncingApp === app.id} style="width: {iconSize}px; height: {iconSize}px;">
             <app.icon size={Math.round(24 * scale)} strokeWidth={1.5} />
           </div>
           {#if tooltipApp === app.id}
@@ -198,6 +207,10 @@
     align-items: center;
     justify-content: center;
     transition: filter 200ms ease;
+  }
+
+  .dock-icon.bouncing {
+    animation: dockBounce 600ms cubic-bezier(0.36, 0, 0.66, -0.56) forwards;
   }
 
   .dock-tooltip {

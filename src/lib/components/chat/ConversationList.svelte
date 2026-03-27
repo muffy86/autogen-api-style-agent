@@ -107,7 +107,6 @@
       const c = chatStore.conversations.find(c => c.id === conv.id);
       if (c) {
         (c as any).pinned = !(c as any).pinned;
-        chatStore.save();
       }
     }
   }

@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { WindowState } from '$lib/types';
-  import { windowStore } from '$lib/stores/windows.svelte';
+  import { windowStore, detectSnapZone } from '$lib/stores/windows.svelte';
   import { contextMenuStore } from '$lib/stores/contextmenu.svelte';
   import type { Component } from 'svelte';
   import { Minus, Square, X, Maximize2, ArrowLeftToLine, ArrowRightToLine } from 'lucide-svelte';
@@ -49,15 +49,17 @@
     const dx = e.clientX - dragStartX;
     const dy = e.clientY - dragStartY;
     windowStore.move(win.id, dragStartWinX + dx, dragStartWinY + dy);
-    windowStore.checkSnap(e.clientX, e.clientY);
+
+    const zone = detectSnapZone(e.clientX, e.clientY);
+    windowStore.setSnapZone(zone);
   }
 
   function handleDragEnd(e: MouseEvent) {
-    isDragging = false;
-    if (windowStore.snapPreview) {
-      windowStore.applySnap(win.id);
+    if (isDragging && windowStore.currentSnapZone) {
+      windowStore.snap(win.id, windowStore.currentSnapZone);
     }
-    windowStore.clearSnap();
+    isDragging = false;
+    windowStore.clearSnapZone();
     document.removeEventListener('mousemove', handleDragMove);
     document.removeEventListener('mouseup', handleDragEnd);
   }
@@ -132,8 +134,8 @@
       { id: 'min', label: 'Minimize', shortcut: '', action: () => windowStore.minimize(win.id) },
       { id: 'max', label: win.isMaximized ? 'Restore' : 'Maximize', action: () => windowStore.maximize(win.id) },
       { id: 'sep1', label: '', separator: true, action: () => {} },
-      { id: 'snap-l', label: 'Snap Left', icon: ArrowLeftToLine, action: () => { windowStore.snapPreview = { region: 'left', bounds: { x: 0, y: 36, width: window.innerWidth / 2, height: window.innerHeight - 36 - 80 } }; windowStore.applySnap(win.id); } },
-      { id: 'snap-r', label: 'Snap Right', icon: ArrowRightToLine, action: () => { windowStore.snapPreview = { region: 'right', bounds: { x: window.innerWidth / 2, y: 36, width: window.innerWidth / 2, height: window.innerHeight - 36 - 80 } }; windowStore.applySnap(win.id); } },
+      { id: 'snap-l', label: 'Snap Left', icon: ArrowLeftToLine, action: () => windowStore.snap(win.id, 'left') },
+      { id: 'snap-r', label: 'Snap Right', icon: ArrowRightToLine, action: () => windowStore.snap(win.id, 'right') },
       { id: 'sep2', label: '', separator: true, action: () => {} },
       { id: 'close', label: 'Close Window', shortcut: '⌘W', danger: true, icon: X, action: handleClose }
     ]);
@@ -238,15 +240,16 @@
     position: fixed;
     border-radius: var(--radius-lg);
     overflow: hidden;
-    background: rgba(12, 12, 20, 0.92);
+    background: var(--window-bg);
     border: 1px solid var(--glass-border);
     box-shadow:
       0 8px 32px rgba(0, 0, 0, 0.5),
       0 0 1px rgba(255, 255, 255, 0.1);
     display: flex;
     flex-direction: column;
-    animation: windowIn 200ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    animation: windowIn 250ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
     will-change: transform;
+    transition: box-shadow var(--transition-smooth);
   }
 
   .window.closing {
@@ -262,7 +265,7 @@
     box-shadow:
       0 12px 48px rgba(0, 0, 0, 0.6),
       0 0 1px rgba(255, 255, 255, 0.15),
-      0 0 24px rgba(139, 92, 246, 0.08);
+      var(--shadow-glow);
   }
 
   .window.maximized {
@@ -275,7 +278,7 @@
     display: flex;
     align-items: center;
     padding: 0 12px;
-    background: rgba(20, 20, 30, 0.9);
+    background: var(--titlebar-bg);
     border-bottom: 1px solid var(--border-subtle);
     cursor: grab;
     flex-shrink: 0;

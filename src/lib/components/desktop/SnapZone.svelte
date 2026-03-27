@@ -8,10 +8,10 @@
   <div
     class="snap-zone"
     style="
-      left: {snap.bounds.x}px;
-      top: {snap.bounds.y}px;
-      width: {snap.bounds.width}px;
-      height: {snap.bounds.height}px;
+      left: {snap.x}px;
+      top: {snap.y}px;
+      width: {snap.w}px;
+      height: {snap.h}px;
     "
   ></div>
 {/if}

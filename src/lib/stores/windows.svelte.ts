@@ -1,10 +1,74 @@
-import type { WindowState, SnapZone } from '$lib/types';
+import type { WindowState } from '$lib/types';
 import { appRegistry } from './apps.svelte';
+
+export type SnapZone = 'top' | 'left' | 'right' | 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right' | null;
+
+export interface SnapPreview {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+const TOPBAR_H = 36;
+const DOCK_H = 80;
+const SNAP_THRESHOLD = 20;
+
+function getSnapBounds(zone: SnapZone): SnapPreview | null {
+  if (!zone || typeof window === 'undefined') return null;
+  const w = window.innerWidth;
+  const h = window.innerHeight - TOPBAR_H - DOCK_H;
+  const halfW = Math.floor(w / 2);
+  const halfH = Math.floor(h / 2);
+
+  switch (zone) {
+    case 'top':
+      return { x: 0, y: TOPBAR_H, w, h };
+    case 'left':
+      return { x: 0, y: TOPBAR_H, w: halfW, h };
+    case 'right':
+      return { x: halfW, y: TOPBAR_H, w: w - halfW, h };
+    case 'top-left':
+      return { x: 0, y: TOPBAR_H, w: halfW, h: halfH };
+    case 'top-right':
+      return { x: halfW, y: TOPBAR_H, w: w - halfW, h: halfH };
+    case 'bottom-left':
+      return { x: 0, y: TOPBAR_H + halfH, w: halfW, h: h - halfH };
+    case 'bottom-right':
+      return { x: halfW, y: TOPBAR_H + halfH, w: w - halfW, h: h - halfH };
+    default:
+      return null;
+  }
+}
+
+export function detectSnapZone(mouseX: number, mouseY: number): SnapZone {
+  if (typeof window === 'undefined') return null;
+  const w = window.innerWidth;
+  const h = window.innerHeight;
+
+  const nearLeft = mouseX <= SNAP_THRESHOLD;
+  const nearRight = mouseX >= w - SNAP_THRESHOLD;
+  const nearTop = mouseY <= SNAP_THRESHOLD + TOPBAR_H;
+  const nearBottom = mouseY >= h - SNAP_THRESHOLD - DOCK_H;
+
+  if (nearTop && nearLeft) return 'top-left';
+  if (nearTop && nearRight) return 'top-right';
+  if (nearBottom && nearLeft) return 'bottom-left';
+  if (nearBottom && nearRight) return 'bottom-right';
+  if (nearTop) return 'top';
+  if (nearLeft) return 'left';
+  if (nearRight) return 'right';
+  return null;
+}
 
 class WindowStore {
   windows = $state<WindowState[]>([]);
   nextZIndex = $state(100);
-  snapPreview = $state<SnapZone | null>(null);
+  currentSnapZone = $state<SnapZone>(null);
+
+  get snapPreview(): SnapPreview | null {
+    return getSnapBounds(this.currentSnapZone);
+  }
 
   get activeWindow(): WindowState | undefined {
     return this.windows
@@ -103,9 +167,9 @@ class WindowStore {
 
     win.preMaximizeBounds = { x: win.x, y: win.y, width: win.width, height: win.height };
     win.x = 0;
-    win.y = 36;
+    win.y = TOPBAR_H;
     win.width = window.innerWidth;
-    win.height = window.innerHeight - 36 - 80;
+    win.height = window.innerHeight - TOPBAR_H - DOCK_H;
     win.isMaximized = true;
   }
 
@@ -119,6 +183,34 @@ class WindowStore {
     win.height = win.preMaximizeBounds.height;
     win.isMaximized = false;
     win.preMaximizeBounds = undefined;
+  }
+
+  snap(id: string, zone: SnapZone): void {
+    if (!zone) return;
+    const win = this.windows.find((w) => w.id === id);
+    if (!win) return;
+
+    const bounds = getSnapBounds(zone);
+    if (!bounds) return;
+
+    if (!win.preMaximizeBounds) {
+      win.preMaximizeBounds = { x: win.x, y: win.y, width: win.width, height: win.height };
+    }
+
+    win.x = bounds.x;
+    win.y = bounds.y;
+    win.width = bounds.w;
+    win.height = bounds.h;
+    win.isMaximized = zone === 'top';
+    this.currentSnapZone = null;
+  }
+
+  setSnapZone(zone: SnapZone): void {
+    this.currentSnapZone = zone;
+  }
+
+  clearSnapZone(): void {
+    this.currentSnapZone = null;
   }
 
   move(id: string, x: number, y: number): void {
@@ -142,52 +234,6 @@ class WindowStore {
     this.windows.forEach((w) => {
       w.isFocused = false;
     });
-  }
-
-  checkSnap(mouseX: number, mouseY: number): void {
-    const threshold = 20;
-    const topBarHeight = 36;
-    const dockHeight = 80;
-    const vw = typeof window !== 'undefined' ? window.innerWidth : 1920;
-    const vh = typeof window !== 'undefined' ? window.innerHeight : 1080;
-
-    if (mouseX <= threshold) {
-      this.snapPreview = {
-        region: 'left',
-        bounds: { x: 0, y: topBarHeight, width: vw / 2, height: vh - topBarHeight - dockHeight }
-      };
-    } else if (mouseX >= vw - threshold) {
-      this.snapPreview = {
-        region: 'right',
-        bounds: { x: vw / 2, y: topBarHeight, width: vw / 2, height: vh - topBarHeight - dockHeight }
-      };
-    } else if (mouseY <= threshold + topBarHeight) {
-      this.snapPreview = {
-        region: 'maximize',
-        bounds: { x: 0, y: topBarHeight, width: vw, height: vh - topBarHeight - dockHeight }
-      };
-    } else {
-      this.snapPreview = null;
-    }
-  }
-
-  applySnap(id: string): void {
-    if (!this.snapPreview) return;
-    const b = this.snapPreview.bounds;
-    const win = this.windows.find((w) => w.id === id);
-    if (win) {
-      win.preMaximizeBounds = { x: win.x, y: win.y, width: win.width, height: win.height };
-      win.x = b.x;
-      win.y = b.y;
-      win.width = b.width;
-      win.height = b.height;
-      win.isMaximized = this.snapPreview.region === 'maximize';
-    }
-    this.snapPreview = null;
-  }
-
-  clearSnap(): void {
-    this.snapPreview = null;
   }
 
   closeAll(appId?: string): void {
