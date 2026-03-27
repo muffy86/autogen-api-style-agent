@@ -128,7 +128,7 @@
 
     if (chatStore.activeConversation) {
       chatStore.addMessage(chatStore.activeConversation.id, {
-        id: `user-${Date.now()}`,
+        id: crypto.randomUUID(),
         role: 'user',
         content: text,
         createdAt: new Date(),

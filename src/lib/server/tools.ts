@@ -1,20 +1,67 @@
 import { tool } from 'ai';
 import { z } from 'zod';
+import { lookup } from 'node:dns/promises';
+import { evaluate } from 'mathjs';
 import { ragStore } from '$lib/server/rag';
+
+const PRIVATE_V4_PATTERNS = [
+  /^127\./,
+  /^10\./,
+  /^172\.(1[6-9]|2\d|3[01])\./,
+  /^192\.168\./,
+  /^169\.254\./,
+  /^0\./,
+];
+
+function extractMappedV4(ip: string): string | null {
+  const dotted = ip.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/);
+  if (dotted) return dotted[1];
+
+  const hex = ip.match(/^::ffff:([0-9a-f]{1,4}):([0-9a-f]{1,4})$/);
+  if (hex) {
+    const hi = parseInt(hex[1], 16);
+    const lo = parseInt(hex[2], 16);
+    return `${(hi >> 8) & 0xff}.${hi & 0xff}.${(lo >> 8) & 0xff}.${lo & 0xff}`;
+  }
+
+  const full = ip.match(/^0{0,4}:0{0,4}:0{0,4}:0{0,4}:0{0,4}:ffff:([0-9a-f]{1,4}):([0-9a-f]{1,4})$/);
+  if (full) {
+    const hi = parseInt(full[1], 16);
+    const lo = parseInt(full[2], 16);
+    return `${(hi >> 8) & 0xff}.${hi & 0xff}.${(lo >> 8) & 0xff}.${lo & 0xff}`;
+  }
+
+  const fullDotted = ip.match(/^0{0,4}:0{0,4}:0{0,4}:0{0,4}:0{0,4}:ffff:(\d+\.\d+\.\d+\.\d+)$/);
+  if (fullDotted) return fullDotted[1];
+
+  return null;
+}
+
+function isPrivateIp(ip: string): boolean {
+  if (PRIVATE_V4_PATTERNS.some(p => p.test(ip))) return true;
+
+  const lower = ip.toLowerCase();
+
+  if (lower === '::1' || lower === '0000:0000:0000:0000:0000:0000:0000:0001') return true;
+  if (lower.startsWith('fc') || lower.startsWith('fd')) return true;
+  if (lower.startsWith('fe80')) return true;
+  if (/^::$/.test(lower) || lower === '0.0.0.0') return true;
+
+  const v4 = extractMappedV4(lower);
+  if (v4 !== null) return PRIVATE_V4_PATTERNS.some(p => p.test(v4));
+
+  return false;
+}
 
 export const elysiumTools = {
   calculator: tool({
     description: 'Evaluate a mathematical expression. Use for any math, unit conversions, or calculations.',
     parameters: z.object({
-      expression: z.string().describe('The math expression to evaluate, e.g. "2 * (3 + 4)" or "Math.sqrt(144)"'),
+      expression: z.string().describe('The math expression to evaluate, e.g. "2 * (3 + 4)" or "sqrt(144)"'),
     }),
     execute: async ({ expression }) => {
       try {
-        const sanitized = expression.replace(/[^0-9+\-*/().,%\s]|(?<![a-zA-Z])(?:Math\.[a-zA-Z]+)/g, (match) => {
-          if (match.startsWith('Math.')) return match;
-          return '';
-        });
-        const result = new Function(`"use strict"; return (${expression})`)();
+        const result = evaluate(expression);
         return { result: String(result), expression };
       } catch (e: any) {
         return { error: e.message, expression };
@@ -71,13 +118,30 @@ export const elysiumTools = {
     parameters: z.object({
       url: z.string().url().describe('The URL to fetch'),
     }),
-    execute: async ({ url }) => {
+    execute: async ({ url: targetUrl }) => {
       try {
-        const res = await fetch(url, {
+        const parsed = new URL(targetUrl);
+        if (parsed.protocol === 'file:') {
+          return { error: 'Access to internal/private URLs is not allowed', url: targetUrl };
+        }
+
+        const hostname = parsed.hostname.toLowerCase();
+        const bare = hostname.replace(/^\[|\]$/g, '');
+
+        if (bare === 'localhost' || isPrivateIp(bare)) {
+          return { error: 'Access to internal/private URLs is not allowed', url: targetUrl };
+        }
+
+        const { address } = await lookup(bare);
+        if (isPrivateIp(address)) {
+          return { error: 'Access to internal/private URLs is not allowed', url: targetUrl };
+        }
+
+        const res = await fetch(targetUrl, {
           headers: { 'User-Agent': 'Elysium-AI/1.0' },
           signal: AbortSignal.timeout(10000),
         });
-        if (!res.ok) return { error: `HTTP ${res.status}: ${res.statusText}`, url };
+        if (!res.ok) return { error: `HTTP ${res.status}: ${res.statusText}`, url: targetUrl };
         const html = await res.text();
         const text = html
           .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
@@ -86,9 +150,9 @@ export const elysiumTools = {
           .replace(/\s+/g, ' ')
           .trim()
           .slice(0, 5000);
-        return { content: text, url, length: text.length };
+        return { content: text, url: targetUrl, length: text.length };
       } catch (e: any) {
-        return { error: e.message, url };
+        return { error: e.message, url: targetUrl };
       }
     },
   }),

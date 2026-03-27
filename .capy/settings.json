@@ -1,0 +1,7 @@
+{
+  "$schema": "https://capy.ai/settings.schema.json",
+  "hooks": {
+    "setup": ["pip install -r requirements.txt"],
+    "terminals": [{ "name": "python", "command": "python -c \"print('Ready')\"" }]
+  }
+}

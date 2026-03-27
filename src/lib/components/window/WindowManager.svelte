@@ -10,7 +10,7 @@
   import KnowledgeApp from '$lib/components/apps/KnowledgeApp.svelte';
   import type { Component } from 'svelte';
 
-  const appComponents: Record<string, Component> = {
+  const appComponents: Record<string, any> = {
     chat: ChatApp,
     files: FilesApp,
     terminal: TerminalApp,
@@ -20,7 +20,7 @@
     knowledge: KnowledgeApp
   };
 
-  function getComponent(appId: string): Component {
+  function getComponent(appId: string): any {
     return appComponents[appId] ?? ChatApp;
   }
 </script>

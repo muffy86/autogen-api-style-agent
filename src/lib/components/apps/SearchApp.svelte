@@ -1,31 +1,141 @@
 <script lang="ts">
-  import { Search, Clock, Zap, ArrowRight, MessageSquare, Folder, Terminal, Settings } from 'lucide-svelte';
+  import { Search, Clock, Zap, ArrowRight, MessageSquare, Folder, Terminal, Settings, LayoutDashboard, AppWindow } from 'lucide-svelte';
+  import { windowStore } from '$lib/stores/windows.svelte';
+  import { chatStore } from '$lib/stores/chat.svelte';
+  import { appRegistry } from '$lib/stores/apps.svelte';
 
   let query = $state('');
+  let selectedIndex = $state(0);
 
-  const recentSearches = [
-    'Project architecture docs',
-    'API integration guide',
-    'Meeting notes March 2026'
-  ];
+  const iconMap: Record<string, any> = {
+    'message-square': MessageSquare,
+    folder: Folder,
+    terminal: Terminal,
+    settings: Settings,
+    search: Search,
+    'layout-dashboard': LayoutDashboard
+  };
+
+  interface SearchResult {
+    id: string;
+    label: string;
+    category: string;
+    icon: any;
+    action: () => void;
+  }
+
+  let results = $derived.by((): SearchResult[] => {
+    const q = query.toLowerCase().trim();
+    if (!q) return [];
+
+    const items: SearchResult[] = [];
+
+    for (const app of appRegistry.apps) {
+      if (app.name.toLowerCase().includes(q) || app.description.toLowerCase().includes(q)) {
+        items.push({
+          id: `app-${app.id}`,
+          label: app.name,
+          category: 'Apps',
+          icon: iconMap[app.icon] ?? Search,
+          action: () => windowStore.open(app.id),
+        });
+      }
+    }
+
+    for (const win of windowStore.windows) {
+      if (win.title.toLowerCase().includes(q) || win.appId.toLowerCase().includes(q)) {
+        items.push({
+          id: `win-${win.id}`,
+          label: `${win.title} (Window)`,
+          category: 'Open Windows',
+          icon: AppWindow,
+          action: () => {
+            if (win.isMinimized) {
+              win.isMinimized = false;
+            }
+            windowStore.focus(win.id);
+          },
+        });
+      }
+    }
+
+    for (const conv of chatStore.conversations) {
+      if (conv.title.toLowerCase().includes(q)) {
+        items.push({
+          id: `conv-${conv.id}`,
+          label: conv.title,
+          category: 'Conversations',
+          icon: MessageSquare,
+          action: () => {
+            chatStore.setActive(conv.id);
+            windowStore.open('chat');
+          },
+        });
+      }
+    }
+
+    return items;
+  });
+
+  let grouped = $derived.by(() => {
+    const groups: Record<string, SearchResult[]> = {};
+    for (const r of results) {
+      if (!groups[r.category]) groups[r.category] = [];
+      groups[r.category].push(r);
+    }
+    return Object.entries(groups);
+  });
+
+  let flatResults = $derived(results);
+
+  $effect(() => {
+    query;
+    selectedIndex = 0;
+  });
 
   const quickActions = [
-    { name: 'New Chat', icon: MessageSquare, shortcut: '⌘ N' },
-    { name: 'Open Files', icon: Folder, shortcut: '⌘ O' },
-    { name: 'Terminal', icon: Terminal, shortcut: '⌘ T' },
-    { name: 'Settings', icon: Settings, shortcut: '⌘ ,' }
+    { name: 'New Chat', icon: MessageSquare, shortcut: '⌘ N', appId: 'chat', action: () => { chatStore.createConversation(); windowStore.open('chat'); } },
+    { name: 'Open Files', icon: Folder, shortcut: '⌘ O', appId: 'files', action: () => windowStore.open('files') },
+    { name: 'Terminal', icon: Terminal, shortcut: '⌘ T', appId: 'terminal', action: () => windowStore.open('terminal') },
+    { name: 'Settings', icon: Settings, shortcut: '⌘ ,', appId: 'settings', action: () => windowStore.open('settings') },
+    { name: 'Dashboard', icon: LayoutDashboard, shortcut: '⌘ D', appId: 'dashboard', action: () => windowStore.open('dashboard') }
   ];
+
+  function handleKeydown(e: KeyboardEvent) {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      selectedIndex = Math.min(selectedIndex + 1, flatResults.length - 1);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      selectedIndex = Math.max(selectedIndex - 1, 0);
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (flatResults[selectedIndex]) {
+        flatResults[selectedIndex].action();
+      }
+    }
+  }
+
+  function getFlatIndex(catIdx: number, itemIdx: number): number {
+    let idx = 0;
+    for (let i = 0; i < catIdx; i++) {
+      idx += grouped[i][1].length;
+    }
+    return idx + itemIdx;
+  }
 </script>
 
 <div class="search-app">
   <div class="search-header">
     <div class="search-input-wrapper">
       <Search size={18} />
+      <!-- svelte-ignore a11y_autofocus -->
       <input
         class="search-input"
         type="text"
-        placeholder="Search anything..."
+        placeholder="Search apps, windows, conversations..."
         bind:value={query}
+        onkeydown={handleKeydown}
         autofocus={true}
       />
     </div>
@@ -35,41 +145,65 @@
     {#if !query}
       <div class="search-section">
         <div class="section-header">
-          <Clock size={13} />
-          <span>Recent Searches</span>
-        </div>
-        {#each recentSearches as item}
-          <button class="search-result">
-            <Clock size={14} />
-            <span>{item}</span>
-            <ArrowRight size={12} class="arrow" />
-          </button>
-        {/each}
-      </div>
-
-      <div class="search-section">
-        <div class="section-header">
           <Zap size={13} />
           <span>Quick Actions</span>
         </div>
         {#each quickActions as action}
-          <button class="search-result">
+          <button class="search-result" onclick={() => action.action()}>
             <action.icon size={14} />
             <span>{action.name}</span>
             <kbd class="shortcut">{action.shortcut}</kbd>
           </button>
         {/each}
       </div>
-    {:else}
+
+      {#if chatStore.conversations.length > 0}
+        <div class="search-section">
+          <div class="section-header">
+            <Clock size={13} />
+            <span>Recent Conversations</span>
+          </div>
+          {#each chatStore.conversations.slice(0, 5) as conv}
+            <button class="search-result" onclick={() => { chatStore.setActive(conv.id); windowStore.open('chat'); }}>
+              <MessageSquare size={14} />
+              <span>{conv.title}</span>
+              <ArrowRight size={12} class="arrow" />
+            </button>
+          {/each}
+        </div>
+      {/if}
+    {:else if results.length === 0}
       <div class="search-section">
         <div class="section-header">
           <Search size={13} />
           <span>Results for "{query}"</span>
         </div>
         <div class="no-results">
-          <p>Start typing to search across all your files, chats, and settings.</p>
+          <p>No results found. Try different keywords.</p>
         </div>
       </div>
+    {:else}
+      {#each grouped as [category, items], catIdx}
+        <div class="search-section">
+          <div class="section-header">
+            <Search size={13} />
+            <span>{category}</span>
+          </div>
+          {#each items as item, itemIdx}
+            {@const flatIdx = getFlatIndex(catIdx, itemIdx)}
+            <button
+              class="search-result"
+              class:selected={flatIdx === selectedIndex}
+              onmouseenter={() => (selectedIndex = flatIdx)}
+              onclick={() => item.action()}
+            >
+              <item.icon size={14} />
+              <span>{item.label}</span>
+              <ArrowRight size={12} class="arrow" />
+            </button>
+          {/each}
+        </div>
+      {/each}
     {/if}
   </div>
 </div>
@@ -101,6 +235,7 @@
     color: var(--text-primary);
     outline: none;
     font-weight: 300;
+    font-family: inherit;
   }
 
   .search-input::placeholder {
@@ -143,10 +278,12 @@
     color: var(--text-secondary);
     transition: all var(--transition-fast);
     text-align: left;
+    font-family: inherit;
   }
 
-  .search-result:hover {
-    background: var(--bg-surface-hover);
+  .search-result:hover,
+  .search-result.selected {
+    background: var(--accent-subtle);
     color: var(--text-primary);
   }
 
