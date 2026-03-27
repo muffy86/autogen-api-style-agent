@@ -4,6 +4,7 @@ import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { createXai } from '@ai-sdk/xai';
 import { createGroq } from '@ai-sdk/groq';
 import { streamText } from 'ai';
+import { elysiumTools } from '$lib/server/tools';
 import { env } from '$env/dynamic/private';
 import type { RequestHandler } from './$types';
 
@@ -54,7 +55,16 @@ export const POST: RequestHandler = async ({ request }) => {
     const result = streamText({
       model,
       messages,
-      system: systemPrompt || 'You are Elysium, a helpful AI assistant running inside Elysium AI OS.',
+      system: systemPrompt || `You are Elysium, a helpful AI assistant running inside Elysium AI OS.
+
+You have access to these tools:
+- **calculator**: Evaluate math expressions
+- **webSearch**: Search the web for current information
+- **urlFetch**: Fetch and read web page content
+
+Use tools proactively when they would help answer the user's question. You can chain multiple tool calls.`,
+      tools: elysiumTools,
+      maxSteps: 5,
       maxOutputTokens: 4096,
     });
 

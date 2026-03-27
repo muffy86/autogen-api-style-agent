@@ -1,5 +1,9 @@
 <script lang="ts">
-  import { Wifi, Volume2, Battery, Sparkles } from 'lucide-svelte';
+  import { Wifi, Volume2, Battery, Sparkles, LogOut } from 'lucide-svelte';
+  import { createSupabaseBrowserClient } from '$lib/supabase/client';
+  import { goto } from '$app/navigation';
+
+  const supabase = createSupabaseBrowserClient();
 
   let hours = $state('');
   let minutes = $state('');
@@ -17,6 +21,11 @@
     const interval = setInterval(updateTime, 10000);
     return () => clearInterval(interval);
   });
+
+  async function handleLogout() {
+    await supabase.auth.signOut();
+    goto('/login');
+  }
 </script>
 
 <div class="topbar glass">
@@ -39,6 +48,9 @@
       <Volume2 size={14} />
       <Battery size={14} />
     </div>
+    <button class="logout-btn" onclick={handleLogout} aria-label="Sign out">
+      <LogOut size={13} strokeWidth={2} />
+    </button>
     <div class="clock">
       <span class="clock-date">{dayStr}</span>
       <span class="clock-time">{hours}:{minutes}</span>
@@ -128,6 +140,25 @@
     align-items: center;
     gap: 10px;
     color: var(--text-secondary);
+  }
+
+  .logout-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    border-radius: 6px;
+    transition: all var(--transition-fast);
+  }
+
+  .logout-btn:hover {
+    background: rgba(239, 68, 68, 0.15);
+    color: #ef4444;
   }
 
   .clock {

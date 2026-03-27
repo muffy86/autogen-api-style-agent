@@ -1,7 +1,15 @@
 <script lang="ts">
   import Desktop from '$lib/components/desktop/Desktop.svelte';
+  import { createSupabaseBrowserClient } from '$lib/supabase/client';
+  import { chatStore } from '$lib/stores/chat.svelte';
+
+  const supabase = createSupabaseBrowserClient();
 
   let isMobile = $state(false);
+
+  $effect(() => {
+    chatStore.init(supabase);
+  });
 
   $effect(() => {
     function checkWidth() {

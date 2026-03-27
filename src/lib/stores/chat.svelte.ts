@@ -1,4 +1,5 @@
 import type { AIModel, Conversation, ChatMessage } from '$lib/types';
+import type { SupabaseClient } from '@supabase/supabase-js';
 
 export const AVAILABLE_MODELS: AIModel[] = [
   // Free-first options
@@ -17,12 +18,11 @@ export const AVAILABLE_MODELS: AIModel[] = [
   { id: 'grok-3-mini', name: 'Grok 3 Mini', provider: 'xai', modelId: 'grok-3-mini', description: 'xAI reasoning model', maxTokens: 131072, color: '#ef4444', tier: 'paid' },
 ];
 
-const STORAGE_KEY_CONVERSATIONS = 'elysium-conversations';
 const STORAGE_KEY_MODEL = 'elysium-selected-model';
 const STORAGE_KEY_ALLOW_PAID = 'elysium-allow-paid';
 
 function generateId(): string {
-  return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+  return crypto.randomUUID();
 }
 
 class ChatStore {
@@ -31,17 +31,100 @@ class ChatStore {
   selectedModel = $state<string>('llama-3.3-70b');
   allowPaid = $state(false);
   initialized = $state(false);
+  loading = $state(false);
+
+  private supabase: SupabaseClient | null = null;
 
   get activeConversation(): Conversation | null {
     return this.conversations.find(c => c.id === this.activeConversationId) ?? null;
   }
 
   constructor() {
-    this.load();
+    if (typeof window !== 'undefined') {
+      try {
+        const model = localStorage.getItem(STORAGE_KEY_MODEL);
+        if (model && AVAILABLE_MODELS.some(m => m.id === model)) {
+          this.selectedModel = model;
+        }
+        const allow = localStorage.getItem(STORAGE_KEY_ALLOW_PAID);
+        this.allowPaid = allow === 'true';
+      } catch {}
+    }
+  }
+
+  async init(supabase: SupabaseClient) {
+    if (this.initialized && this.supabase === supabase) return;
+    this.supabase = supabase;
+    this.loading = true;
+
+    try {
+      const { data: convRows, error: convError } = await supabase
+        .from('conversations')
+        .select('*')
+        .order('updated_at', { ascending: false });
+
+      if (convError) {
+        console.error('Failed to load conversations:', convError.message);
+        this.initialized = true;
+        this.loading = false;
+        return;
+      }
+
+      const conversations: Conversation[] = [];
+
+      if (convRows && convRows.length > 0) {
+        const convIds = convRows.map(c => c.id);
+        const { data: msgRows, error: msgError } = await supabase
+          .from('messages')
+          .select('*')
+          .in('conversation_id', convIds)
+          .order('created_at', { ascending: true });
+
+        if (msgError) {
+          console.error('Failed to load messages:', msgError.message);
+        }
+
+        const messagesByConv = new Map<string, ChatMessage[]>();
+        if (msgRows) {
+          for (const m of msgRows) {
+            const list = messagesByConv.get(m.conversation_id) ?? [];
+            list.push({
+              id: m.id,
+              role: m.role as 'user' | 'assistant' | 'system',
+              content: m.content,
+              model: m.model ?? undefined,
+              createdAt: new Date(m.created_at),
+            });
+            messagesByConv.set(m.conversation_id, list);
+          }
+        }
+
+        for (const row of convRows) {
+          conversations.push({
+            id: row.id,
+            title: row.title,
+            messages: messagesByConv.get(row.id) ?? [],
+            model: row.model,
+            systemPrompt: row.system_prompt ?? '',
+            createdAt: new Date(row.created_at),
+            updatedAt: new Date(row.updated_at),
+          });
+        }
+      }
+
+      this.conversations = conversations;
+      if (this.conversations.length > 0) {
+        this.activeConversationId = this.conversations[0].id;
+      }
+    } catch (err) {
+      console.error('Failed to initialize chat store:', err);
+    }
+
+    this.initialized = true;
+    this.loading = false;
   }
 
   createConversation(): string {
-    const model = AVAILABLE_MODELS.find(m => m.id === this.selectedModel) ?? AVAILABLE_MODELS[0];
     const id = generateId();
     const conversation: Conversation = {
       id,
@@ -54,7 +137,42 @@ class ChatStore {
     };
     this.conversations.unshift(conversation);
     this.activeConversationId = id;
-    this.save();
+
+    if (this.supabase) {
+      this.supabase
+        .from('conversations')
+        .insert({
+          id,
+          user_id: undefined,
+          title: 'New Chat',
+          model: this.selectedModel,
+          system_prompt: '',
+        })
+        .then(async ({ error }) => {
+          if (error) {
+            if (error.message?.includes('user_id')) {
+              const { data: { user } } = await this.supabase!.auth.getUser();
+              if (user) {
+                const { error: retryError } = await this.supabase!
+                  .from('conversations')
+                  .insert({
+                    id,
+                    user_id: user.id,
+                    title: 'New Chat',
+                    model: this.selectedModel,
+                    system_prompt: '',
+                  });
+                if (retryError) {
+                  console.error('Failed to create conversation:', retryError.message);
+                }
+              }
+            } else {
+              console.error('Failed to create conversation:', error.message);
+            }
+          }
+        });
+    }
+
     return id;
   }
 
@@ -66,7 +184,16 @@ class ChatStore {
     if (this.activeConversationId === id) {
       this.activeConversationId = this.conversations[0]?.id ?? null;
     }
-    this.save();
+
+    if (this.supabase) {
+      this.supabase
+        .from('conversations')
+        .delete()
+        .eq('id', id)
+        .then(({ error }) => {
+          if (error) console.error('Failed to delete conversation:', error.message);
+        });
+    }
   }
 
   setActive(id: string) {
@@ -80,6 +207,10 @@ class ChatStore {
           conv.model = free.id;
           this.selectedModel = free.id;
           this.save();
+          if (this.supabase) {
+            this.supabase.from('conversations').update({ model: free.id }).eq('id', id)
+              .then(({ error }) => { if (error) console.error('Failed to update model:', error.message); });
+          }
           return;
         }
       }
@@ -91,8 +222,21 @@ class ChatStore {
     this.selectedModel = modelId;
     if (this.activeConversation) {
       this.activeConversation.model = modelId;
+
+      if (this.supabase) {
+        this.supabase
+          .from('conversations')
+          .update({ model: modelId })
+          .eq('id', this.activeConversation.id)
+          .then(({ error }) => {
+            if (error) console.error('Failed to update model:', error.message);
+          });
+      }
     }
-    this.save();
+
+    try {
+      localStorage.setItem(STORAGE_KEY_MODEL, modelId);
+    } catch {}
   }
 
   setAllowPaid(allow: boolean) {
@@ -113,6 +257,10 @@ class ChatStore {
           const info = AVAILABLE_MODELS.find(m => m.id === c.model);
           if (!info || info.tier === 'paid') {
             c.model = fallback.id;
+            if (this.supabase) {
+              this.supabase.from('conversations').update({ model: fallback.id }).eq('id', c.id)
+                .then(({ error }) => { if (error) console.error('Failed to update model:', error.message); });
+            }
           }
         }
       }
@@ -125,17 +273,53 @@ class ChatStore {
     if (!conv) return;
     conv.messages.push(message);
     conv.updatedAt = new Date();
+
+    let titleUpdated = false;
     if (message.role === 'user' && conv.messages.filter(m => m.role === 'user').length === 1) {
       conv.title = message.content.slice(0, 50) + (message.content.length > 50 ? '...' : '');
+      titleUpdated = true;
     }
-    this.save();
+
+    if (this.supabase) {
+      this.supabase
+        .from('messages')
+        .insert({
+          id: message.id,
+          conversation_id: conversationId,
+          role: message.role,
+          content: message.content,
+          model: message.model ?? null,
+        })
+        .then(({ error }) => {
+          if (error) console.error('Failed to save message:', error.message);
+        });
+
+      if (titleUpdated) {
+        this.supabase
+          .from('conversations')
+          .update({ title: conv.title })
+          .eq('id', conversationId)
+          .then(({ error }) => {
+            if (error) console.error('Failed to update title:', error.message);
+          });
+      }
+    }
   }
 
   updateConversationTitle(id: string, title: string) {
     const conv = this.conversations.find(c => c.id === id);
     if (conv) {
       conv.title = title;
-      this.save();
+
+      if (this.supabase) {
+        this.supabase
+          .from('conversations')
+          .update({ title })
+          .eq('id', id)
+          .then(({ error }) => {
+            if (error) console.error('Failed to update title:', error.message);
+          });
+      }
     }
   }
 
@@ -143,67 +327,25 @@ class ChatStore {
     const conv = this.conversations.find(c => c.id === id);
     if (conv) {
       conv.systemPrompt = prompt;
-      this.save();
+
+      if (this.supabase) {
+        this.supabase
+          .from('conversations')
+          .update({ system_prompt: prompt })
+          .eq('id', id)
+          .then(({ error }) => {
+            if (error) console.error('Failed to update system prompt:', error.message);
+          });
+      }
     }
   }
 
   save() {
     if (typeof window === 'undefined') return;
     try {
-      const data = this.conversations.map(c => ({
-        ...c,
-        createdAt: c.createdAt instanceof Date ? c.createdAt.toISOString() : c.createdAt,
-        updatedAt: c.updatedAt instanceof Date ? c.updatedAt.toISOString() : c.updatedAt,
-        messages: c.messages.map(m => ({
-          ...m,
-          createdAt: m.createdAt instanceof Date ? m.createdAt.toISOString() : m.createdAt,
-        })),
-      }));
-      localStorage.setItem(STORAGE_KEY_CONVERSATIONS, JSON.stringify(data));
       localStorage.setItem(STORAGE_KEY_MODEL, this.selectedModel);
       localStorage.setItem(STORAGE_KEY_ALLOW_PAID, String(this.allowPaid));
     } catch {}
-  }
-
-  load() {
-    if (typeof window === 'undefined') return;
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY_CONVERSATIONS);
-      if (raw) {
-        const parsed = JSON.parse(raw) as any[];
-        this.conversations = parsed.map(c => ({
-          ...c,
-          createdAt: new Date(c.createdAt),
-          updatedAt: new Date(c.updatedAt),
-          messages: (c.messages ?? []).map((m: any) => ({
-            ...m,
-            createdAt: new Date(m.createdAt),
-          })),
-        }));
-        if (this.conversations.length > 0) {
-          this.activeConversationId = this.conversations[0].id;
-        }
-      }
-      const model = localStorage.getItem(STORAGE_KEY_MODEL);
-      if (model && AVAILABLE_MODELS.some(m => m.id === model)) {
-        this.selectedModel = model;
-      }
-      const allow = localStorage.getItem(STORAGE_KEY_ALLOW_PAID);
-      this.allowPaid = allow === 'true';
-      if (!this.allowPaid) {
-        const sel = AVAILABLE_MODELS.find(m => m.id === this.selectedModel);
-        if (!sel || sel.tier === 'paid') {
-          const free = AVAILABLE_MODELS.find(m => m.tier === 'free');
-          if (free) {
-            this.selectedModel = free.id;
-            if (this.activeConversation) {
-              this.activeConversation.model = free.id;
-            }
-          }
-        }
-      }
-    } catch {}
-    this.initialized = true;
   }
 }
 
