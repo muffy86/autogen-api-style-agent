@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { WindowState } from '$lib/types';
-  import { windowStore } from '$lib/stores/windows.svelte';
+  import { windowStore, detectSnapZone } from '$lib/stores/windows.svelte';
   import type { Component } from 'svelte';
   import { Minus, Square, X } from 'lucide-svelte';
   import { appRegistry } from '$lib/stores/apps.svelte';
@@ -48,10 +48,17 @@
     const dx = e.clientX - dragStartX;
     const dy = e.clientY - dragStartY;
     windowStore.move(win.id, dragStartWinX + dx, dragStartWinY + dy);
+
+    const zone = detectSnapZone(e.clientX, e.clientY);
+    windowStore.setSnapZone(zone);
   }
 
-  function handleDragEnd() {
+  function handleDragEnd(e: MouseEvent) {
+    if (isDragging && windowStore.currentSnapZone) {
+      windowStore.snap(win.id, windowStore.currentSnapZone);
+    }
     isDragging = false;
+    windowStore.clearSnapZone();
     document.removeEventListener('mousemove', handleDragMove);
     document.removeEventListener('mouseup', handleDragEnd);
   }
@@ -199,15 +206,16 @@
     position: fixed;
     border-radius: var(--radius-lg);
     overflow: hidden;
-    background: rgba(12, 12, 20, 0.92);
+    background: var(--window-bg);
     border: 1px solid var(--glass-border);
     box-shadow:
       0 8px 32px rgba(0, 0, 0, 0.5),
       0 0 1px rgba(255, 255, 255, 0.1);
     display: flex;
     flex-direction: column;
-    animation: windowIn 200ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    animation: windowIn 250ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
     will-change: transform;
+    transition: box-shadow var(--transition-smooth);
   }
 
   .window.closing {
@@ -223,7 +231,7 @@
     box-shadow:
       0 12px 48px rgba(0, 0, 0, 0.6),
       0 0 1px rgba(255, 255, 255, 0.15),
-      0 0 24px rgba(139, 92, 246, 0.08);
+      var(--shadow-glow);
   }
 
   .window.maximized {
@@ -237,7 +245,7 @@
     align-items: center;
     justify-content: space-between;
     padding: 0 12px;
-    background: rgba(20, 20, 30, 0.9);
+    background: var(--titlebar-bg);
     border-bottom: 1px solid var(--border-subtle);
     cursor: grab;
     flex-shrink: 0;
