@@ -13,7 +13,14 @@ function getModel(provider: string, modelId: string) {
     case 'openai': {
       const key = env.OPENAI_API_KEY;
       if (!key) throw new Error('OPENAI_API_KEY not configured');
-      return createOpenAI({ apiKey: key })(modelId);
+      const baseURL = env.OPENAI_BASE_URL;
+      return createOpenAI({ apiKey: key, ...(baseURL ? { baseURL } : {}) })(modelId);
+    }
+    case 'openrouter': {
+      const key = env.OPENROUTER_API_KEY ?? env.OPENAI_API_KEY;
+      if (!key) throw new Error('OPENROUTER_API_KEY or OPENAI_API_KEY not configured');
+      const baseURL = env.OPENROUTER_BASE_URL ?? 'https://openrouter.ai/api/v1';
+      return createOpenAI({ apiKey: key, baseURL })(modelId);
     }
     case 'anthropic': {
       const key = env.ANTHROPIC_API_KEY;
@@ -42,20 +49,27 @@ function getModel(provider: string, modelId: string) {
 
 export const POST: RequestHandler = async ({ request }) => {
   try {
-    const { messages, provider, modelId, systemPrompt } = await request.json();
+    const { messages, provider, modelId, systemPrompt, memoryContext } = await request.json();
     const model = getModel(provider, modelId);
 
-    const result = streamText({
-      model,
-      messages,
-      system: systemPrompt || `You are Elysium, a helpful AI assistant running inside Elysium AI OS.
+    const basePrompt = systemPrompt || `You are Elysium, a helpful AI assistant running inside Elysium AI OS.
 
 You have access to these tools:
 - **calculator**: Evaluate math expressions
 - **webSearch**: Search the web for current information
 - **urlFetch**: Fetch and read web page content
+- **codeExec**: Execute JavaScript code snippets
+- **knowledgeSearch**: Search through uploaded documents in the Knowledge Base
+- **saveMemory**: Save important facts or preferences about the user for future conversations
 
-Use tools proactively when they would help answer the user's question. You can chain multiple tool calls.`,
+Use tools proactively when they would help answer the user's question. You can chain multiple tool calls.
+When the user shares personal preferences or important facts, use saveMemory to remember them.
+When the user asks about their documents or uploaded files, use knowledgeSearch to find relevant information.`;
+
+    const result = streamText({
+      model,
+      messages,
+      system: basePrompt + (memoryContext || ''),
       tools: elysiumTools,
       maxSteps: 5,
       maxOutputTokens: 4096,

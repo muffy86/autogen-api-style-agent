@@ -2,6 +2,7 @@ import { tool } from 'ai';
 import { z } from 'zod';
 import { lookup } from 'node:dns/promises';
 import { evaluate } from 'mathjs';
+import { ragStore } from '$lib/server/rag';
 
 const PRIVATE_V4_PATTERNS = [
   /^127\./,
@@ -164,6 +165,52 @@ export const elysiumTools = {
         return { content: text, url: targetUrl, length: text.length };
       } catch (e: any) {
         return { error: e.message, url: targetUrl };
+      }
+    },
+  }),
+
+  knowledgeSearch: tool({
+    description: 'Search through uploaded documents in the Knowledge Base for relevant information. Use when the user asks about their documents or uploaded files.',
+    parameters: z.object({
+      query: z.string().describe('Search query to find relevant document passages'),
+    }),
+    execute: async ({ query }) => {
+      const results = ragStore.search(query, 3);
+      if (results.length === 0) {
+        return { results: [], message: 'No relevant documents found. The user may need to upload files to the Knowledge Base.' };
+      }
+      return { results };
+    },
+  }),
+
+  saveMemory: tool({
+    description: 'Save an important fact or preference about the user for future conversations. Use when the user shares personal info, preferences, or important context you should remember.',
+    parameters: z.object({
+      content: z.string().describe('The fact or preference to remember'),
+      importance: z.number().min(1).max(5).describe('Importance: 1=trivial, 3=normal, 5=critical'),
+    }),
+    execute: async ({ content, importance }) => {
+      return { saved: true, content, importance, message: 'Memory saved successfully.' };
+    },
+  }),
+
+  codeExec: tool({
+    description: 'Execute a JavaScript code snippet and return the result. Use for computations, data transformations, or demonstrating code behavior.',
+    parameters: z.object({
+      code: z.string().describe('JavaScript code to execute. Use console.log() for output.'),
+    }),
+    execute: async ({ code }) => {
+      try {
+        const logs: string[] = [];
+        const mockConsole = { log: (...args: any[]) => logs.push(args.map(String).join(' ')) };
+        const fn = new Function('console', `"use strict";\n${code}`);
+        const result = fn(mockConsole);
+        return {
+          output: logs.join('\n'),
+          returnValue: result !== undefined ? String(result) : undefined,
+        };
+      } catch (e: any) {
+        return { error: e.message };
       }
     },
   }),

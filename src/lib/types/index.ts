@@ -48,9 +48,10 @@ export interface Conversation {
 export interface AIModel {
   id: string;
   name: string;
-  provider: 'openai' | 'anthropic' | 'google' | 'xai' | 'groq';
+  provider: 'openrouter' | 'openai' | 'anthropic' | 'google' | 'xai' | 'groq';
   modelId: string;
   description: string;
   maxTokens: number;
   color: string;
+  tier: 'free' | 'paid';
 }

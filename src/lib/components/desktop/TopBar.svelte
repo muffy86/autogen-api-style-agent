@@ -35,11 +35,11 @@
       <span class="brand-text">Elysium</span>
     </button>
     <div class="topbar-menus">
-      <button class="menu-item">File</button>
-      <button class="menu-item">Edit</button>
-      <button class="menu-item">View</button>
-      <button class="menu-item">Window</button>
-      <button class="menu-item">Help</button>
+      <button class="menu-item" disabled title="Coming soon">File</button>
+      <button class="menu-item" disabled title="Coming soon">Edit</button>
+      <button class="menu-item" disabled title="Coming soon">View</button>
+      <button class="menu-item" disabled title="Coming soon">Window</button>
+      <button class="menu-item" disabled title="Coming soon">Help</button>
     </div>
   </div>
   <div class="topbar-right">
@@ -124,9 +124,14 @@
     transition: all var(--transition-fast);
   }
 
-  .menu-item:hover {
+  .menu-item:hover:not(:disabled) {
     background: var(--bg-surface-hover);
     color: var(--text-primary);
+  }
+
+  .menu-item:disabled {
+    opacity: 0.4;
+    cursor: default;
   }
 
   .topbar-right {
