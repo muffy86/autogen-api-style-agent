@@ -1,3 +1,38 @@
+Metadata-Version: 2.4
+Name: autogen-api-style-agent
+Version: 0.1.0
+Summary: Multi-agent AI productivity system powered by AutoGen with 6 LLM providers
+Author: muffy86
+License: MIT
+Classifier: Development Status :: 3 - Alpha
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: autogen-agentchat==0.7.5
+Requires-Dist: autogen-ext[openai]==0.7.5
+Requires-Dist: fastapi>=0.115.0
+Requires-Dist: uvicorn[standard]>=0.32.0
+Requires-Dist: typer[all]>=0.15.0
+Requires-Dist: pydantic-settings>=2.6.0
+Requires-Dist: python-dotenv>=1.0.0
+Requires-Dist: httpx>=0.28.0
+Requires-Dist: mcp>=1.0.0
+Provides-Extra: google
+Requires-Dist: autogen-ext[gemini]==0.7.5; extra == "google"
+Provides-Extra: dev
+Requires-Dist: autogen-ext[gemini]==0.7.5; extra == "dev"
+Requires-Dist: pytest>=8.0; extra == "dev"
+Requires-Dist: pytest-asyncio>=0.24; extra == "dev"
+Requires-Dist: pytest-cov>=6.0; extra == "dev"
+Requires-Dist: ruff>=0.8.0; extra == "dev"
+Dynamic: license-file
+
 # AutoGen API Style Agent
 
 [![CI](https://github.com/muffy86/autogen-api-style-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/muffy86/autogen-api-style-agent/actions/workflows/ci.yml)

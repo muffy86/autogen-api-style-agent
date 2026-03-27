@@ -1,0 +1,24 @@
+{
+  "name": "AutoGen API Style Agent",
+  "description": "Multi-agent productivity system with 6 LLM providers",
+  "mcpServers": {
+    "autogen-agent": {
+      "command": "python",
+      "args": ["-m", "autogen_api_agent.mcp_server"],
+      "env": {},
+      "description": "AutoGen multi-agent productivity system — exposes agent_chat, agent_code_review, agent_research tools"
+    }
+  },
+  "installInstructions": {
+    "prerequisites": [
+      "Python 3.10+",
+      "Node.js 18+ (for MCP transport)"
+    ],
+    "steps": [
+      "Clone the repository: git clone https://github.com/muffy86/autogen-api-style-agent.git",
+      "Run bootstrap: bash scripts/bootstrap.sh",
+      "Add API keys to .env",
+      "Open project in Trae IDE — MCP servers auto-configure"
+    ]
+  }
+}
