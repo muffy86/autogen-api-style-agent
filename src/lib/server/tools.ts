@@ -119,29 +119,41 @@ export const elysiumTools = {
     }),
     execute: async ({ url: targetUrl }) => {
       try {
-        const parsed = new URL(targetUrl);
-        if (parsed.protocol === 'file:') {
-          return { error: 'Access to internal/private URLs is not allowed', url: targetUrl };
+        async function validateUrl(urlStr: string): Promise<string | null> {
+          const parsed = new URL(urlStr);
+          if (parsed.protocol === 'file:') return 'Access to internal/private URLs is not allowed';
+          const hostname = parsed.hostname.toLowerCase().replace(/^\[|\]$/g, '');
+          if (hostname === 'localhost' || isPrivateIp(hostname)) return 'Access to internal/private URLs is not allowed';
+          const { address } = await lookup(hostname);
+          if (isPrivateIp(address)) return 'Access to internal/private URLs is not allowed';
+          return null;
         }
 
-        const hostname = parsed.hostname.toLowerCase();
-        const bare = hostname.replace(/^\[|\]$/g, '');
+        const initialError = await validateUrl(targetUrl);
+        if (initialError) return { error: initialError, url: targetUrl };
 
-        if (bare === 'localhost' || isPrivateIp(bare)) {
-          return { error: 'Access to internal/private URLs is not allowed', url: targetUrl };
+        let currentUrl = targetUrl;
+        let res: Response;
+        for (let i = 0; i < 5; i++) {
+          res = await fetch(currentUrl, {
+            headers: { 'User-Agent': 'Elysium-AI/1.0' },
+            signal: AbortSignal.timeout(10000),
+            redirect: 'manual',
+          });
+
+          if (res.status >= 300 && res.status < 400) {
+            const location = res.headers.get('location');
+            if (!location) return { error: 'Redirect with no Location header', url: currentUrl };
+            currentUrl = new URL(location, currentUrl).href;
+            const redirectError = await validateUrl(currentUrl);
+            if (redirectError) return { error: redirectError, url: targetUrl };
+            continue;
+          }
+          break;
         }
 
-        const { address } = await lookup(bare);
-        if (isPrivateIp(address)) {
-          return { error: 'Access to internal/private URLs is not allowed', url: targetUrl };
-        }
-
-        const res = await fetch(targetUrl, {
-          headers: { 'User-Agent': 'Elysium-AI/1.0' },
-          signal: AbortSignal.timeout(10000),
-        });
-        if (!res.ok) return { error: `HTTP ${res.status}: ${res.statusText}`, url: targetUrl };
-        const html = await res.text();
+        if (!res!.ok) return { error: `HTTP ${res!.status}: ${res!.statusText}`, url: targetUrl };
+        const html = await res!.text();
         const text = html
           .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
           .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
