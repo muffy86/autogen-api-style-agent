@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Sparkles, MessageSquare, Folder, Terminal, Settings, Search, LayoutDashboard } from 'lucide-svelte';
+  import { Sparkles, MessageSquare, Folder, Terminal, Settings, Search, LayoutDashboard, BookOpen } from 'lucide-svelte';
   import { windowStore } from '$lib/stores/windows.svelte';
   import { desktopState } from '$lib/stores/desktop.svelte';
   import { contextMenuStore } from '$lib/stores/contextmenu.svelte';
@@ -10,6 +10,7 @@
     { id: 'files', name: 'Files', icon: Folder, isLauncher: false, group: 1 },
     { id: 'terminal', name: 'Terminal', icon: Terminal, isLauncher: false, group: 1 },
     { id: 'dashboard', name: 'Dashboard', icon: LayoutDashboard, isLauncher: false, group: 1 },
+    { id: 'knowledge', name: 'Knowledge', icon: BookOpen, isLauncher: false, group: 1 },
     { id: 'settings', name: 'Settings', icon: Settings, isLauncher: false, group: 2 },
     { id: 'search', name: 'Search', icon: Search, isLauncher: false, group: 2 }
   ];

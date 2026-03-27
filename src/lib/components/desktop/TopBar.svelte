@@ -239,6 +239,11 @@
     color: var(--text-primary);
   }
 
+  .menu-item:disabled {
+    opacity: 0.4;
+    cursor: default;
+  }
+
   .topbar-right {
     display: flex;
     align-items: center;

@@ -2,6 +2,7 @@ import { tool } from 'ai';
 import { z } from 'zod';
 import { lookup } from 'node:dns/promises';
 import { evaluate } from 'mathjs';
+import { ragStore } from '$lib/server/rag';
 
 const PRIVATE_V4_PATTERNS = [
   /^127\./,
@@ -119,29 +120,41 @@ export const elysiumTools = {
     }),
     execute: async ({ url: targetUrl }) => {
       try {
-        const parsed = new URL(targetUrl);
-        if (parsed.protocol === 'file:') {
-          return { error: 'Access to internal/private URLs is not allowed', url: targetUrl };
+        async function validateUrl(urlStr: string): Promise<string | null> {
+          const parsed = new URL(urlStr);
+          if (parsed.protocol === 'file:') return 'Access to internal/private URLs is not allowed';
+          const hostname = parsed.hostname.toLowerCase().replace(/^\[|\]$/g, '');
+          if (hostname === 'localhost' || isPrivateIp(hostname)) return 'Access to internal/private URLs is not allowed';
+          const { address } = await lookup(hostname);
+          if (isPrivateIp(address)) return 'Access to internal/private URLs is not allowed';
+          return null;
         }
 
-        const hostname = parsed.hostname.toLowerCase();
-        const bare = hostname.replace(/^\[|\]$/g, '');
+        const initialError = await validateUrl(targetUrl);
+        if (initialError) return { error: initialError, url: targetUrl };
 
-        if (bare === 'localhost' || isPrivateIp(bare)) {
-          return { error: 'Access to internal/private URLs is not allowed', url: targetUrl };
+        let currentUrl = targetUrl;
+        let res: Response;
+        for (let i = 0; i < 5; i++) {
+          res = await fetch(currentUrl, {
+            headers: { 'User-Agent': 'Elysium-AI/1.0' },
+            signal: AbortSignal.timeout(10000),
+            redirect: 'manual',
+          });
+
+          if (res.status >= 300 && res.status < 400) {
+            const location = res.headers.get('location');
+            if (!location) return { error: 'Redirect with no Location header', url: currentUrl };
+            currentUrl = new URL(location, currentUrl).href;
+            const redirectError = await validateUrl(currentUrl);
+            if (redirectError) return { error: redirectError, url: targetUrl };
+            continue;
+          }
+          break;
         }
 
-        const { address } = await lookup(bare);
-        if (isPrivateIp(address)) {
-          return { error: 'Access to internal/private URLs is not allowed', url: targetUrl };
-        }
-
-        const res = await fetch(targetUrl, {
-          headers: { 'User-Agent': 'Elysium-AI/1.0' },
-          signal: AbortSignal.timeout(10000),
-        });
-        if (!res.ok) return { error: `HTTP ${res.status}: ${res.statusText}`, url: targetUrl };
-        const html = await res.text();
+        if (!res!.ok) return { error: `HTTP ${res!.status}: ${res!.statusText}`, url: targetUrl };
+        const html = await res!.text();
         const text = html
           .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
           .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
@@ -152,6 +165,52 @@ export const elysiumTools = {
         return { content: text, url: targetUrl, length: text.length };
       } catch (e: any) {
         return { error: e.message, url: targetUrl };
+      }
+    },
+  }),
+
+  knowledgeSearch: tool({
+    description: 'Search through uploaded documents in the Knowledge Base for relevant information. Use when the user asks about their documents or uploaded files.',
+    parameters: z.object({
+      query: z.string().describe('Search query to find relevant document passages'),
+    }),
+    execute: async ({ query }) => {
+      const results = ragStore.search(query, 3);
+      if (results.length === 0) {
+        return { results: [], message: 'No relevant documents found. The user may need to upload files to the Knowledge Base.' };
+      }
+      return { results };
+    },
+  }),
+
+  saveMemory: tool({
+    description: 'Save an important fact or preference about the user for future conversations. Use when the user shares personal info, preferences, or important context you should remember.',
+    parameters: z.object({
+      content: z.string().describe('The fact or preference to remember'),
+      importance: z.number().min(1).max(5).describe('Importance: 1=trivial, 3=normal, 5=critical'),
+    }),
+    execute: async ({ content, importance }) => {
+      return { saved: true, content, importance, message: 'Memory saved successfully.' };
+    },
+  }),
+
+  codeExec: tool({
+    description: 'Execute a JavaScript code snippet and return the result. Use for computations, data transformations, or demonstrating code behavior.',
+    parameters: z.object({
+      code: z.string().describe('JavaScript code to execute. Use console.log() for output.'),
+    }),
+    execute: async ({ code }) => {
+      try {
+        const logs: string[] = [];
+        const mockConsole = { log: (...args: any[]) => logs.push(args.map(String).join(' ')) };
+        const fn = new Function('console', `"use strict";\n${code}`);
+        const result = fn(mockConsole);
+        return {
+          output: logs.join('\n'),
+          returnValue: result !== undefined ? String(result) : undefined,
+        };
+      } catch (e: any) {
+        return { error: e.message };
       }
     },
   }),
