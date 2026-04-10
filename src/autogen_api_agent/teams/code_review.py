@@ -29,10 +29,7 @@ def create_code_review_team(
     reviewer = create_reviewer(client)
     architect = create_architect(client)
 
-    termination = (
-        TextMentionTermination("TERMINATE")
-        | MaxMessageTermination(config.max_turns)
-    )
+    termination = TextMentionTermination("TERMINATE") | MaxMessageTermination(config.max_turns)
 
     team = RoundRobinGroupChat(
         participants=[coder, reviewer, architect],

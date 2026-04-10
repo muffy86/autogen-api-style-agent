@@ -70,9 +70,7 @@ class SessionManager:
 
     async def cleanup_expired(self) -> int:
         async with self._lock:
-            expired = [
-                sid for sid, s in self._sessions.items() if s.is_expired
-            ]
+            expired = [sid for sid, s in self._sessions.items() if s.is_expired]
             for sid in expired:
                 del self._sessions[sid]
             return len(expired)
@@ -84,8 +82,4 @@ class SessionManager:
 
     async def list_sessions(self) -> list[str]:
         async with self._lock:
-            return [
-                sid
-                for sid, s in self._sessions.items()
-                if not s.is_expired
-            ]
+            return [sid for sid, s in self._sessions.items() if not s.is_expired]

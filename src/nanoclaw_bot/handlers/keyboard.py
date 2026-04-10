@@ -1,9 +1,10 @@
 import logging
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import ContextTypes, CallbackQueryHandler
-from nanoclaw_bot.security import owner_only
-from nanoclaw_bot.config import ConfigManager
+
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
+from telegram.ext import ContextTypes
+
 from nanoclaw_bot import __version__
+from nanoclaw_bot.config import ConfigManager
 
 logger = logging.getLogger("nanoclaw_bot.keyboard")
 
@@ -72,13 +73,15 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.edit_message_text(
             "🦎 *NanoClaw Bot* — Main Menu\n\nTap a button or use text commands:",
             reply_markup=main_menu_keyboard(),
-            parse_mode="Markdown"
+            parse_mode="Markdown",
         )
 
     elif data == "menu_status":
         # Build status inline
-        import sys, time
+        import sys
+        import time
         from pathlib import Path
+
         config: ConfigManager = context.bot_data["config"]
         uptime_seconds = int(time.time() - context.bot_data.get("start_time", time.time()))
         hours, remainder = divmod(uptime_seconds, 3600)
@@ -96,7 +99,11 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
         keyboard = [[InlineKeyboardButton("🔙 Back", callback_data="menu_main")]]
-        await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
+        await query.edit_message_text(
+            text,
+            reply_markup=InlineKeyboardMarkup(keyboard),
+            parse_mode="Markdown",
+        )
 
     elif data == "menu_keys":
         config: ConfigManager = context.bot_data["config"]
@@ -108,22 +115,30 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             text = f"🔑 *API Keys* ({len(api_keys)}):\n\n" + "\n".join(lines)
 
         keyboard = [[InlineKeyboardButton("🔙 Back", callback_data="menu_main")]]
-        await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
+        await query.edit_message_text(
+            text,
+            reply_markup=InlineKeyboardMarkup(keyboard),
+            parse_mode="Markdown",
+        )
 
     elif data == "menu_agents":
         await query.edit_message_text(
             "🤖 *Agent Management*\n\nUse buttons below or text commands:",
             reply_markup=agents_menu_keyboard(),
-            parse_mode="Markdown"
+            parse_mode="Markdown",
         )
 
     elif data == "agents_list":
         try:
             from nanoclaw_bot.agents import AgentManager
+
             mgr = AgentManager()
             sessions = mgr.list_sessions()
             if not sessions:
-                text = "🔌 No agent sessions running.\n\nStart one with:\n`/agents start <name> <command>`"
+                text = (
+                    "🔌 No agent sessions running.\n\n"
+                    "Start one with:\n`/agents start <name> <command>`"
+                )
             else:
                 lines = [f"• `{s.name}` — 🟢 running" for s in sessions]
                 text = f"🤖 *Agents* ({len(sessions)}):\n\n" + "\n".join(lines)
@@ -131,7 +146,11 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             text = "🤖 *Agents:* N/A (tmux not available)"
 
         keyboard = [[InlineKeyboardButton("🔙 Back", callback_data="menu_agents")]]
-        await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
+        await query.edit_message_text(
+            text,
+            reply_markup=InlineKeyboardMarkup(keyboard),
+            parse_mode="Markdown",
+        )
 
     elif data == "menu_notify":
         enabled = context.bot_data.get("notify_enabled", False)
@@ -146,11 +165,17 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
         keyboard = [[InlineKeyboardButton("🔙 Back", callback_data="menu_main")]]
-        await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
+        await query.edit_message_text(
+            text,
+            reply_markup=InlineKeyboardMarkup(keyboard),
+            parse_mode="Markdown",
+        )
 
     elif data == "menu_logs":
-        from nanoclaw_bot.handlers.logs import _tail
         from pathlib import Path
+
+        from nanoclaw_bot.handlers.logs import _tail
+
         log_file = context.bot_data.get("log_file")
         if log_file and Path(log_file).exists():
             content = _tail(Path(log_file), lines=15)
@@ -164,7 +189,11 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             text = "📋 No log file found."
 
         keyboard = [[InlineKeyboardButton("🔙 Back", callback_data="menu_main")]]
-        await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
+        await query.edit_message_text(
+            text,
+            reply_markup=InlineKeyboardMarkup(keyboard),
+            parse_mode="Markdown",
+        )
 
     elif data == "menu_update":
         text = (
@@ -174,7 +203,11 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "This will pull latest code, reinstall deps, and restart."
         )
         keyboard = [[InlineKeyboardButton("🔙 Back", callback_data="menu_main")]]
-        await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
+        await query.edit_message_text(
+            text,
+            reply_markup=InlineKeyboardMarkup(keyboard),
+            parse_mode="Markdown",
+        )
 
     elif data == "menu_backup":
         text = (
@@ -184,7 +217,11 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "Sends a JSON file with key names, agent list, and settings."
         )
         keyboard = [[InlineKeyboardButton("🔙 Back", callback_data="menu_main")]]
-        await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
+        await query.edit_message_text(
+            text,
+            reply_markup=InlineKeyboardMarkup(keyboard),
+            parse_mode="Markdown",
+        )
 
     elif data == "menu_help":
         text = (
@@ -198,10 +235,15 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "Full reference: /help"
         )
         keyboard = [[InlineKeyboardButton("🔙 Back", callback_data="menu_main")]]
-        await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
+        await query.edit_message_text(
+            text,
+            reply_markup=InlineKeyboardMarkup(keyboard),
+            parse_mode="Markdown",
+        )
 
     elif data == "menu_eliza":
         from nanoclaw_bot.eliza import ElizaOSIntegration
+
         eliza = context.bot_data.get("eliza")
         if not eliza:
             eliza = ElizaOSIntegration()
@@ -227,4 +269,8 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"• `/eliza list` — List personalities"
         )
         keyboard = [[InlineKeyboardButton("🔙 Back", callback_data="menu_main")]]
-        await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
+        await query.edit_message_text(
+            text,
+            reply_markup=InlineKeyboardMarkup(keyboard),
+            parse_mode="Markdown",
+        )

@@ -90,10 +90,7 @@ async def analyze_python_file(path: str) -> str:
 async def check_syntax(code: str, language: str = "python") -> str:
     """Check code syntax for errors."""
     if language != "python":
-        return (
-            f"Syntax checking for '{language}' is not yet supported. "
-            "Only Python is available."
-        )
+        return f"Syntax checking for '{language}' is not yet supported. Only Python is available."
 
     try:
         ast.parse(code)
@@ -110,9 +107,7 @@ def _calc_complexity(node: ast.AST) -> int:
     """Calculate cyclomatic complexity of a function node."""
     complexity = 1
     for child in ast.walk(node):
-        if isinstance(
-            child, (ast.If, ast.While, ast.For, ast.AsyncFor, ast.ExceptHandler)
-        ):
+        if isinstance(child, (ast.If, ast.While, ast.For, ast.AsyncFor, ast.ExceptHandler)):
             complexity += 1
         elif isinstance(child, ast.BoolOp):
             complexity += len(child.values) - 1

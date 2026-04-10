@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+
 from dotenv import dotenv_values, set_key
 
 
@@ -42,10 +43,9 @@ class ConfigManager:
         """Get all configured API keys (keys ending in _KEY or _TOKEN, excluding TELEGRAM_*)."""
         values = dotenv_values(self.env_path)
         return {
-            k: v for k, v in values.items()
-            if (k.endswith("_KEY") or k.endswith("_TOKEN"))
-            and not k.startswith("TELEGRAM_")
-            and v
+            k: v
+            for k, v in values.items()
+            if (k.endswith("_KEY") or k.endswith("_TOKEN")) and not k.startswith("TELEGRAM_") and v
         }
 
     @staticmethod
@@ -58,11 +58,15 @@ class ConfigManager:
     def get_bot_token(self) -> str:
         token = self.get("TELEGRAM_BOT_TOKEN")
         if not token:
-            raise ValueError("TELEGRAM_BOT_TOKEN not set. Add it to .env or set as environment variable.")
+            raise ValueError(
+                "TELEGRAM_BOT_TOKEN not set. Add it to .env or set as environment variable."
+            )
         return token
 
     def get_owner_chat_id(self) -> int:
         chat_id = self.get("TELEGRAM_OWNER_CHAT_ID")
         if not chat_id:
-            raise ValueError("TELEGRAM_OWNER_CHAT_ID not set. Add it to .env or set as environment variable.")
+            raise ValueError(
+                "TELEGRAM_OWNER_CHAT_ID not set. Add it to .env or set as environment variable."
+            )
         return int(chat_id)

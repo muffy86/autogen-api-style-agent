@@ -1,4 +1,5 @@
 """Pre-configured agent teams."""
+
 from __future__ import annotations
 
 from .code_review import create_code_review_team
@@ -24,9 +25,7 @@ def create_team(
     """Dispatch to the appropriate team creation function by name."""
     creator = _TEAM_MAP.get(team_name)
     if creator is None:
-        raise ValueError(
-            f"Unknown team: {team_name!r}. Available: {list(_TEAM_MAP)}"
-        )
+        raise ValueError(f"Unknown team: {team_name!r}. Available: {list(_TEAM_MAP)}")
     kwargs: dict = {"factory": factory}
     if provider is not None:
         kwargs["provider"] = provider

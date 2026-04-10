@@ -1,17 +1,18 @@
-from telegram.ext import Application, CommandHandler, CallbackQueryHandler
-from nanoclaw_bot.handlers.start import start_handler
-from nanoclaw_bot.handlers.configure import configure_handler
-from nanoclaw_bot.handlers.keys import keys_handler
-from nanoclaw_bot.handlers.status import status_handler
-from nanoclaw_bot.handlers.help import help_handler
+from telegram.ext import Application, CallbackQueryHandler, CommandHandler
+
 from nanoclaw_bot.handlers.agents import agents_handler
-from nanoclaw_bot.handlers.shell import shell_handler
-from nanoclaw_bot.handlers.logs import logs_handler
-from nanoclaw_bot.handlers.update import update_handler
-from nanoclaw_bot.handlers.notify import notify_handler
-from nanoclaw_bot.handlers.keyboard import callback_handler
 from nanoclaw_bot.handlers.backup import backup_handler
+from nanoclaw_bot.handlers.configure import configure_handler
 from nanoclaw_bot.handlers.eliza import eliza_handler
+from nanoclaw_bot.handlers.help import help_handler
+from nanoclaw_bot.handlers.keyboard import callback_handler
+from nanoclaw_bot.handlers.keys import keys_handler
+from nanoclaw_bot.handlers.logs import logs_handler
+from nanoclaw_bot.handlers.notify import notify_handler
+from nanoclaw_bot.handlers.shell import shell_handler
+from nanoclaw_bot.handlers.start import start_handler
+from nanoclaw_bot.handlers.status import status_handler
+from nanoclaw_bot.handlers.update import update_handler
 
 
 def register_handlers(app: Application):

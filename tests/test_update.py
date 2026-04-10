@@ -1,7 +1,8 @@
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch, PropertyMock
-from pathlib import Path
-from nanoclaw_bot.handlers.update import update_handler, _find_project_root
+
+from nanoclaw_bot.handlers.update import _find_project_root, update_handler
 
 
 def _make_mocks(text="/update", user_id=12345678, owner_id=12345678):
@@ -74,9 +75,11 @@ async def test_update_success_triggers_restart():
             return ("Successfully installed nanoclaw-bot", "", 0)
         return ("", "", 0)
 
-    with patch("nanoclaw_bot.handlers.update._run_cmd", side_effect=mock_run_cmd), \
-         patch("nanoclaw_bot.handlers.update.asyncio.sleep", new_callable=AsyncMock), \
-         patch("nanoclaw_bot.handlers.update.os.execv") as mock_execv:
+    with (
+        patch("nanoclaw_bot.handlers.update._run_cmd", side_effect=mock_run_cmd),
+        patch("nanoclaw_bot.handlers.update.asyncio.sleep", new_callable=AsyncMock),
+        patch("nanoclaw_bot.handlers.update.os.execv") as mock_execv,
+    ):
         await update_handler(update_obj, context)
 
     assert call_count["git"] == 1

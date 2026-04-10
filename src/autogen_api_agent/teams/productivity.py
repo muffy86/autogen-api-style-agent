@@ -64,10 +64,7 @@ def create_productivity_team(
     writer = create_writer(client)
     devops = create_devops(client)
 
-    termination = (
-        TextMentionTermination("TERMINATE")
-        | MaxMessageTermination(config.max_turns)
-    )
+    termination = TextMentionTermination("TERMINATE") | MaxMessageTermination(config.max_turns)
 
     team = SelectorGroupChat(
         participants=[

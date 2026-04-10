@@ -1,6 +1,12 @@
-import pytest
 from unittest.mock import AsyncMock, MagicMock
-from nanoclaw_bot.handlers.keyboard import callback_handler, main_menu_keyboard, agents_menu_keyboard
+
+import pytest
+
+from nanoclaw_bot.handlers.keyboard import (
+    agents_menu_keyboard,
+    callback_handler,
+    main_menu_keyboard,
+)
 
 
 def test_main_menu_has_buttons():

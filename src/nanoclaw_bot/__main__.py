@@ -1,8 +1,9 @@
+import logging
 import sys
 import time
-import logging
-from nanoclaw_bot.logging_config import setup_logging
+
 from nanoclaw_bot.bot import create_bot, run_bot
+from nanoclaw_bot.logging_config import setup_logging
 
 logger = logging.getLogger("nanoclaw_bot")
 
@@ -13,7 +14,7 @@ BACKOFF_BASE = 5  # seconds
 def main():
     log_file = setup_logging()
     logger.info("NanoClaw Bot initializing...")
-    
+
     retries = 0
     while retries < MAX_RETRIES:
         try:
@@ -36,9 +37,8 @@ def main():
             retries += 1
             wait = BACKOFF_BASE * (2 ** (retries - 1))  # 5s, 10s, 20s, 40s, 80s
             logger.error(
-                f"Bot crashed: {e}. Restarting in {wait}s... "
-                f"(attempt {retries}/{MAX_RETRIES})",
-                exc_info=True
+                f"Bot crashed: {e}. Restarting in {wait}s... (attempt {retries}/{MAX_RETRIES})",
+                exc_info=True,
             )
             try:
                 time.sleep(wait)

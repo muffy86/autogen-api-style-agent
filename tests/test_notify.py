@@ -1,6 +1,8 @@
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
-from nanoclaw_bot.handlers.notify import notify_handler, check_agents_job
+
+import pytest
+
+from nanoclaw_bot.handlers.notify import check_agents_job, notify_handler
 
 
 def _make_mocks(text="/notify", user_id=12345678, owner_id=12345678):
@@ -65,8 +67,8 @@ async def test_check_agents_job_detects_crash():
     }
     context.bot.send_message = AsyncMock()
 
-    with patch("nanoclaw_bot.handlers.notify.AgentManager") as MockMgr:
-        mgr_instance = MockMgr.return_value
+    with patch("nanoclaw_bot.handlers.notify.AgentManager") as mock_mgr:
+        mgr_instance = mock_mgr.return_value
         mgr_instance._session_name.return_value = "nanoclaw_agent_myagent"
         mgr_instance.is_session_running.return_value = False
 

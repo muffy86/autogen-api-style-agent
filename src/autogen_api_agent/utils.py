@@ -1,4 +1,5 @@
 """Shared utilities for extracting responses from AutoGen message types."""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any

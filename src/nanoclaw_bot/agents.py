@@ -1,12 +1,12 @@
-import subprocess
 import shutil
+import subprocess
 from dataclasses import dataclass
-from pathlib import Path
 
 
 @dataclass
 class AgentStatus:
     """Status of an agent process."""
+
     name: str
     running: bool
     session_name: str
@@ -24,7 +24,10 @@ class AgentManager:
     def _validate_tmux(self):
         """Check if tmux is installed."""
         if not shutil.which("tmux"):
-            raise RuntimeError("tmux is not installed. Install with: pkg install tmux (Termux) or apt install tmux (Linux)")
+            raise RuntimeError(
+                "tmux is not installed. Install with: "
+                "pkg install tmux (Termux) or apt install tmux (Linux)"
+            )
 
     def _session_name(self, agent_name: str) -> str:
         """Get the tmux session name for an agent."""
@@ -86,7 +89,7 @@ class AgentManager:
         """List all NanoClaw agent sessions."""
         result = self._run(
             ["tmux", "list-sessions", "-F", "#{session_name}"],
-            check=False
+            check=False,
         )
 
         if result.returncode != 0:
@@ -95,12 +98,14 @@ class AgentManager:
         statuses = []
         for line in result.stdout.strip().splitlines():
             if line.startswith(self.SESSION_PREFIX):
-                agent_name = line[len(self.SESSION_PREFIX):]
-                statuses.append(AgentStatus(
-                    name=agent_name,
-                    running=True,
-                    session_name=line,
-                ))
+                agent_name = line[len(self.SESSION_PREFIX) :]
+                statuses.append(
+                    AgentStatus(
+                        name=agent_name,
+                        running=True,
+                        session_name=line,
+                    )
+                )
 
         return statuses
 
@@ -115,7 +120,7 @@ class AgentManager:
 
         result = self._run(
             ["tmux", "capture-pane", "-t", session, "-p", "-S", f"-{lines}"],
-            check=False
+            check=False,
         )
 
         if result.returncode != 0:

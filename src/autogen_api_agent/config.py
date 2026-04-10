@@ -17,9 +17,7 @@ class ProviderConfig(BaseSettings):
 
     # Together.ai
     together_api_key: str | None = Field(None, alias="TOGETHER_API_KEY")
-    together_model: str = Field(
-        "meta-llama/Llama-3.3-70B-Instruct-Turbo", alias="TOGETHER_MODEL"
-    )
+    together_model: str = Field("meta-llama/Llama-3.3-70B-Instruct-Turbo", alias="TOGETHER_MODEL")
     together_base_url: str = "https://api.together.xyz/v1"
 
     # OpenRouter
@@ -62,9 +60,7 @@ class ProviderConfig(BaseSettings):
 class AppConfig(BaseSettings):
     """Main application config."""
 
-    model_config = SettingsConfigDict(
-        env_file=".env", env_file_encoding="utf-8", extra="ignore"
-    )
+    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
     # Server
     host: str = "0.0.0.0"

@@ -3,6 +3,7 @@
 Supports Trae.ai, Cursor, Claude Code, and any other MCP-compatible client.
 Primary transport is stdio; SSE can be added later.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -54,8 +55,7 @@ def _build_tools() -> list[Tool]:
         Tool(
             name="agent_code_review",
             description=(
-                "Review code using the code review agent team "
-                "(coder + reviewer + architect)."
+                "Review code using the code review agent team (coder + reviewer + architect)."
             ),
             inputSchema={
                 "type": "object",
@@ -77,8 +77,7 @@ def _build_tools() -> list[Tool]:
         Tool(
             name="agent_research",
             description=(
-                "Research a topic using the research agent team "
-                "(researcher + writer + architect)."
+                "Research a topic using the research agent team (researcher + writer + architect)."
             ),
             inputSchema={
                 "type": "object",
@@ -140,8 +139,7 @@ def create_mcp_server() -> Server:
             lang = arguments.get("language", "python")
             focus = arguments.get("focus", "all")
             prompt = (
-                f"Review this {lang} code. Focus: {focus}.\n\n"
-                f"```{lang}\n{arguments['code']}\n```"
+                f"Review this {lang} code. Focus: {focus}.\n\n```{lang}\n{arguments['code']}\n```"
             )
             result = await team_obj.run(task=prompt)
             return [TextContent(type="text", text=extract_final_response(result))]
@@ -178,9 +176,7 @@ async def run_mcp_stdio() -> None:
     """Run MCP server over stdio transport."""
     server = create_mcp_server()
     async with stdio_server() as (read_stream, write_stream):
-        await server.run(
-            read_stream, write_stream, server.create_initialization_options()
-        )
+        await server.run(read_stream, write_stream, server.create_initialization_options())
 
 
 def main() -> None:

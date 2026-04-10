@@ -43,6 +43,11 @@ def create_quick_agent(
     client = factory.create(provider, model)
 
     all_tools = get_tools(
+        "file_ops",
+        "web_search",
+        "github",
+        "shell",
+        "code_analysis",
     )
 
     return AssistantAgent(

@@ -1,10 +1,12 @@
 from functools import wraps
+
 from telegram import Update
 from telegram.ext import ContextTypes
 
 
 def owner_only(func):
     """Decorator that restricts handler to owner chat ID only."""
+
     @wraps(func)
     async def wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
         config = context.bot_data.get("config")
@@ -23,4 +25,5 @@ def owner_only(func):
             return
 
         return await func(update, context)
+
     return wrapper
