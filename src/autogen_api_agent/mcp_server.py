@@ -1,8 +1,4 @@
-"""MCP Server that exposes the autogen agent system as tools for IDE integration.
-
-Supports Trae.ai, Cursor, Claude Code, and any other MCP-compatible client.
-Primary transport is stdio; SSE can be added later.
-"""
+"""MCP Server that exposes the autogen agent system as tools for IDE integration."""
 
 from __future__ import annotations
 
@@ -12,6 +8,8 @@ import json
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
 from mcp.types import TextContent, Tool
+from starlette.requests import Request
+from starlette.responses import JSONResponse
 
 from .config import get_config
 from .providers import ModelClientFactory
@@ -177,6 +175,53 @@ async def run_mcp_stdio() -> None:
     server = create_mcp_server()
     async with stdio_server() as (read_stream, write_stream):
         await server.run(read_stream, write_stream, server.create_initialization_options())
+
+
+async def run_mcp_sse(host: str = "0.0.0.0", port: int = 3000) -> None:
+    """Run MCP server over SSE transport with a Starlette HTTP wrapper."""
+    import uvicorn
+    from starlette.applications import Starlette
+    from starlette.routing import Route
+    from starlette.types import Receive, Scope, Send
+
+    try:
+        from mcp.server.sse import SseServerTransport
+    except ImportError as exc:
+        raise RuntimeError(
+            "Installed mcp package does not provide SseServerTransport. "
+            "Upgrade the mcp dependency to use SSE transport."
+        ) from exc
+
+    server = create_mcp_server()
+    sse = SseServerTransport("/messages/")
+
+    class SSEEndpoint:
+        async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+            async with sse.connect_sse(scope, receive, send) as streams:
+                await server.run(
+                    streams[0],
+                    streams[1],
+                    server.create_initialization_options(),
+                )
+
+    class MessageEndpoint:
+        async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+            await sse.handle_post_message(scope, receive, send)
+
+    async def handle_health(_: Request) -> JSONResponse:
+        return JSONResponse({"status": "ok"})
+
+    app = Starlette(
+        routes=[
+            Route("/sse", endpoint=SSEEndpoint()),
+            Route("/messages/", endpoint=MessageEndpoint(), methods=["POST"]),
+            Route("/health", endpoint=handle_health),
+        ]
+    )
+
+    config = uvicorn.Config(app, host=host, port=port, log_level="info")
+    server_instance = uvicorn.Server(config)
+    await server_instance.serve()
 
 
 def main() -> None:
