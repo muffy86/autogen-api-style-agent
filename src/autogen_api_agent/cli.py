@@ -254,5 +254,6 @@ def mcp_serve(
         asyncio.run(run_mcp_stdio())
     else:
         console.print(f"[bold green]Starting MCP server (SSE on port {port})...[/bold green]")
-        console.print("[yellow]SSE transport not yet implemented. Use --transport stdio.[/yellow]")
-        raise typer.Exit(code=1)
+        from .mcp_server import run_mcp_sse
+
+        asyncio.run(run_mcp_sse(port=port))
