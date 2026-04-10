@@ -2,29 +2,41 @@ class ElizaOSIntegration:
     """ElizaOS-style AI personality integration with memory."""
 
     PERSONALITIES = {
-        'assistant': {
-            'name': 'Assistant',
-            'system_prompt': 'You are a helpful, concise AI assistant. Provide clear, actionable responses.',
-            'emoji': '🤖'
+        "assistant": {
+            "name": "Assistant",
+            "system_prompt": (
+                "You are a helpful, concise AI assistant. Provide clear, actionable responses."
+            ),
+            "emoji": "🤖",
         },
-        'therapist': {
-            'name': 'Therapist',
-            'system_prompt': 'You are a compassionate therapist using active listening techniques. Ask open-ended questions, reflect feelings back, and help the user explore their thoughts. Never give medical advice.',
-            'emoji': '🧠'
+        "therapist": {
+            "name": "Therapist",
+            "system_prompt": (
+                "You are a compassionate therapist using active listening techniques. "
+                "Ask open-ended questions, reflect feelings back, and help the user "
+                "explore their thoughts. Never give medical advice."
+            ),
+            "emoji": "🧠",
         },
-        'creative': {
-            'name': 'Creative',
-            'system_prompt': 'You are an imaginative creative writing partner. Use vivid language, suggest unexpected angles, and help brainstorm ideas with enthusiasm.',
-            'emoji': '🎨'
+        "creative": {
+            "name": "Creative",
+            "system_prompt": (
+                "You are an imaginative creative writing partner. Use vivid language, "
+                "suggest unexpected angles, and help brainstorm ideas with enthusiasm."
+            ),
+            "emoji": "🎨",
         },
-        'technical': {
-            'name': 'Technical',
-            'system_prompt': 'You are a senior software engineer. Give precise technical answers with code examples when relevant. Mention trade-offs and best practices.',
-            'emoji': '💻'
-        }
+        "technical": {
+            "name": "Technical",
+            "system_prompt": (
+                "You are a senior software engineer. Give precise technical answers "
+                "with code examples when relevant. Mention trade-offs and best practices."
+            ),
+            "emoji": "💻",
+        },
     }
 
-    def __init__(self, default_personality: str = 'assistant', max_messages: int = 20):
+    def __init__(self, default_personality: str = "assistant", max_messages: int = 20):
         self._default_personality = default_personality
         self._max_messages = max_messages
         self._chat_personalities: dict[int, str] = {}
@@ -46,16 +58,16 @@ class ElizaOSIntegration:
     def add_message(self, chat_id: int, role: str, content: str):
         if chat_id not in self._chat_memory:
             self._chat_memory[chat_id] = []
-        self._chat_memory[chat_id].append({'role': role, 'content': content})
+        self._chat_memory[chat_id].append({"role": role, "content": content})
         if len(self._chat_memory[chat_id]) > self._max_messages:
-            self._chat_memory[chat_id] = self._chat_memory[chat_id][-self._max_messages:]
+            self._chat_memory[chat_id] = self._chat_memory[chat_id][-self._max_messages :]
 
     def get_context(self, chat_id: int) -> dict:
         personality = self.get_personality(chat_id)
         messages = self._chat_memory.get(chat_id, [])
         return {
-            'system_prompt': personality['system_prompt'],
-            'messages': list(messages),
+            "system_prompt": personality["system_prompt"],
+            "messages": list(messages),
         }
 
     def get_memory_size(self, chat_id: int) -> int:
@@ -65,5 +77,5 @@ class ElizaOSIntegration:
         self._chat_memory.pop(chat_id, None)
 
     def enhance(self, chat_id: int, user_input: str) -> dict:
-        self.add_message(chat_id, 'user', user_input)
+        self.add_message(chat_id, "user", user_input)
         return self.get_context(chat_id)

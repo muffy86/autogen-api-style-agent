@@ -1,4 +1,5 @@
 """GitHub webhook handlers for automated agent responses."""
+
 from __future__ import annotations
 
 import hashlib
@@ -31,9 +32,7 @@ def _verify_signature(body: bytes, signature: str | None) -> None:
         return
     if not signature:
         raise HTTPException(status_code=401, detail="Missing signature header")
-    expected = "sha256=" + hmac.new(
-        secret.encode(), body, hashlib.sha256
-    ).hexdigest()
+    expected = "sha256=" + hmac.new(secret.encode(), body, hashlib.sha256).hexdigest()
     if not hmac.compare_digest(expected, signature):
         raise HTTPException(status_code=401, detail="Invalid signature")
 
@@ -78,7 +77,7 @@ async def _run_webhook_agent(
         _webhook_jobs[job_id] = {"status": "failed", "error": "Agent execution failed"}
 
 
-@router.post("/github")
+@router.post("/github", status_code=202)
 async def github_webhook(
     request: Request,
     background_tasks: BackgroundTasks,
@@ -116,11 +115,7 @@ async def github_webhook(
         title = pr.get("title", "")
         body_text = pr.get("body", "") or ""
         diff_url = pr.get("diff_url", "")
-        prompt = (
-            f"Review this pull request:\n"
-            f"Title: {title}\n"
-            f"Description: {body_text}"
-        )
+        prompt = f"Review this pull request:\nTitle: {title}\nDescription: {body_text}"
         team_name = "code_review"
 
     elif event == "issues" and payload.get("action") == "opened":
@@ -137,18 +132,15 @@ async def github_webhook(
     elif event == "push":
         commits = payload.get("commits", [])
         commit_msgs = [c.get("message", "") for c in commits[:5]]
-        prompt = (
-            "Analyze these commits for potential breaking changes or issues:\n"
-            + "\n".join(f"- {m}" for m in commit_msgs)
+        prompt = "Analyze these commits for potential breaking changes or issues:\n" + "\n".join(
+            f"- {m}" for m in commit_msgs
         )
         team_name = "quick"
 
     if team_name and prompt:
         job_id = uuid.uuid4().hex
         _webhook_jobs[job_id] = {"status": "running"}
-        background_tasks.add_task(
-            _run_webhook_agent, job_id, team_name, factory, prompt, diff_url
-        )
+        background_tasks.add_task(_run_webhook_agent, job_id, team_name, factory, prompt, diff_url)
         return {"status": "accepted", "job_id": job_id}
 
     return {"status": "ignored", "event": event}

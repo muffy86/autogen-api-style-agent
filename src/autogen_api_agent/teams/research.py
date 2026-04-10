@@ -29,10 +29,7 @@ def create_research_team(
     writer = create_writer(client)
     architect = create_architect(client)
 
-    termination = (
-        TextMentionTermination("TERMINATE")
-        | MaxMessageTermination(config.max_turns)
-    )
+    termination = TextMentionTermination("TERMINATE") | MaxMessageTermination(config.max_turns)
 
     team = RoundRobinGroupChat(
         participants=[researcher, writer, architect],

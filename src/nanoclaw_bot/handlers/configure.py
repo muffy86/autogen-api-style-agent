@@ -1,10 +1,12 @@
 import re
+
 from telegram import Update
 from telegram.ext import ContextTypes
-from nanoclaw_bot.security import owner_only
-from nanoclaw_bot.config import ConfigManager
 
-VALID_KEY_PATTERN = re.compile(r'^[A-Z][A-Z0-9_]*$')
+from nanoclaw_bot.config import ConfigManager
+from nanoclaw_bot.security import owner_only
+
+VALID_KEY_PATTERN = re.compile(r"^[A-Z][A-Z0-9_]*$")
 
 
 @owner_only
@@ -20,7 +22,7 @@ async def configure_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "Usage: `/configure KEY=value KEY=value`\n\n"
             "Example:\n"
             "`/configure OPENAI_API_KEY=sk-... ANTHROPIC_API_KEY=sk-ant-...`",
-            parse_mode="Markdown"
+            parse_mode="Markdown",
         )
         return
 
@@ -48,6 +50,5 @@ async def configure_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     lines = [f"✅ `{k}` = `{config.mask_value(v)}`" for k, v in keys.items()]
     await update.message.reply_text(
-        f"🔑 Configured {len(keys)} key(s):\n" + "\n".join(lines),
-        parse_mode="Markdown"
+        f"🔑 Configured {len(keys)} key(s):\n" + "\n".join(lines), parse_mode="Markdown"
     )

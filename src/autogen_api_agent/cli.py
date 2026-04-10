@@ -1,4 +1,5 @@
 """Typer CLI application for the AutoGen API Style Agent."""
+
 from __future__ import annotations
 
 import asyncio
@@ -171,9 +172,7 @@ def interactive(
     from .teams import create_team
     from .utils import extract_message_text
 
-    console.print(
-        Panel("AutoGen Interactive Mode", subtitle="Type /help for commands")
-    )
+    console.print(Panel("AutoGen Interactive Mode", subtitle="Type /help for commands"))
 
     cfg = get_config()
     factory = ModelClientFactory(cfg)
@@ -221,9 +220,7 @@ def interactive(
         prov = None if current_provider == "auto" else current_provider
 
         try:
-            team_obj = create_team(
-                team_name=current_team, factory=factory, provider=prov
-            )
+            team_obj = create_team(team_name=current_team, factory=factory, provider=prov)
         except Exception as exc:
             console.print(f"[bold red]Error creating team:[/bold red] {exc}")
             continue
@@ -246,9 +243,7 @@ def interactive(
 
 @app.command(name="mcp-serve")
 def mcp_serve(
-    transport: str = typer.Option(
-        "stdio", "--transport", help="MCP transport: stdio or sse"
-    ),
+    transport: str = typer.Option("stdio", "--transport", help="MCP transport: stdio or sse"),
     port: int = typer.Option(3000, "--port", "-p", help="Port for SSE transport"),
 ):
     """Start the MCP server for IDE integration (Trae.ai, Cursor, Claude Code)."""
@@ -258,10 +253,7 @@ def mcp_serve(
 
         asyncio.run(run_mcp_stdio())
     else:
-        console.print(
-            f"[bold green]Starting MCP server (SSE on port {port})...[/bold green]"
-        )
-        console.print(
-            "[yellow]SSE transport not yet implemented. Use --transport stdio.[/yellow]"
-        )
-        raise typer.Exit(code=1)
+        console.print(f"[bold green]Starting MCP server (SSE on port {port})...[/bold green]")
+        from .mcp_server import run_mcp_sse
+
+        asyncio.run(run_mcp_sse(port=port))

@@ -84,9 +84,7 @@ async def search_files(pattern: str, directory: str = ".") -> str:
         return f"Error searching files: {e}"
 
 
-async def find_in_files(
-    query: str, directory: str = ".", file_pattern: str = "*.py"
-) -> str:
+async def find_in_files(query: str, directory: str = ".", file_pattern: str = "*.py") -> str:
     """Search for a string/regex pattern within files."""
     try:
         p = Path(directory).expanduser().resolve()

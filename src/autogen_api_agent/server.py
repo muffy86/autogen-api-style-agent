@@ -1,4 +1,5 @@
 """FastAPI HTTP server — OpenAI-compatible chat completions with SSE streaming."""
+
 from __future__ import annotations
 
 import asyncio
@@ -77,6 +78,7 @@ app.include_router(webhook_router)
 # Health / discovery endpoints
 # ---------------------------------------------------------------------------
 
+
 @app.get("/health")
 async def health():
     """Health check with provider status."""
@@ -95,18 +97,21 @@ async def list_models():
     available = factory.list_available()
     models = []
     for provider, model in available.items():
-        models.append({
-            "id": f"{provider}/{model}",
-            "object": "model",
-            "created": int(time.time()),
-            "owned_by": provider,
-        })
+        models.append(
+            {
+                "id": f"{provider}/{model}",
+                "object": "model",
+                "created": int(time.time()),
+                "owned_by": provider,
+            }
+        )
     return {"object": "list", "data": models}
 
 
 # ---------------------------------------------------------------------------
 # Chat completions (OpenAI-compatible)
 # ---------------------------------------------------------------------------
+
 
 @app.post("/v1/chat/completions")
 async def chat_completions(request: ChatCompletionRequest):
@@ -150,15 +155,11 @@ async def chat_completions(request: ChatCompletionRequest):
 
     return ChatCompletionResponse(
         model=request.model,
-        choices=[
-            ChatChoice(message=ChatMessage(role="assistant", content=assistant_content))
-        ],
+        choices=[ChatChoice(message=ChatMessage(role="assistant", content=assistant_content))],
     )
 
 
-async def _stream_response(
-    team, task: str, model: str, session
-) -> AsyncGenerator[str, None]:
+async def _stream_response(team, task: str, model: str, session) -> AsyncGenerator[str, None]:
     """Stream team execution as SSE chunks."""
     chunk_id = f"chatcmpl-{uuid.uuid4().hex[:8]}"
     created = int(time.time())
@@ -203,6 +204,7 @@ async def _stream_response(
 # ---------------------------------------------------------------------------
 # Provider / team / session management
 # ---------------------------------------------------------------------------
+
 
 @app.get("/v1/providers")
 async def list_providers():

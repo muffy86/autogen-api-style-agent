@@ -1,5 +1,6 @@
 from telegram import Update
 from telegram.ext import ContextTypes
+
 from nanoclaw_bot.security import owner_only
 
 
@@ -61,5 +62,5 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "*Security:*\n"
         "All commands are restricted to the configured owner chat ID.\n"
         "API keys are stored in a `.env` file with 0600 permissions.",
-        parse_mode="Markdown"
+        parse_mode="Markdown",
     )

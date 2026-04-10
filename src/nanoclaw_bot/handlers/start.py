@@ -1,7 +1,8 @@
 from telegram import Update
 from telegram.ext import ContextTypes
-from nanoclaw_bot.security import owner_only
+
 from nanoclaw_bot.handlers.keyboard import main_menu_keyboard
+from nanoclaw_bot.security import owner_only
 
 
 @owner_only
@@ -18,5 +19,5 @@ async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "• `/backup` — Export config backup\n"
         "• `/help` — Full command reference",
         reply_markup=main_menu_keyboard(),
-        parse_mode="Markdown"
+        parse_mode="Markdown",
     )

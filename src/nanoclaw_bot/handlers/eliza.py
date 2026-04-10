@@ -1,7 +1,8 @@
 from telegram import Update
 from telegram.ext import ContextTypes
-from nanoclaw_bot.security import owner_only
+
 from nanoclaw_bot.eliza import ElizaOSIntegration
+from nanoclaw_bot.security import owner_only
 
 
 def _get_eliza(context: ContextTypes.DEFAULT_TYPE) -> ElizaOSIntegration:
@@ -29,21 +30,19 @@ async def eliza_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text(
                 "Usage: `/eliza set <personality>`\n\n"
                 "Available: assistant, therapist, creative, technical",
-                parse_mode="Markdown"
+                parse_mode="Markdown",
             )
             return
         if eliza.set_personality(chat_id, name):
             p = eliza.get_personality(chat_id)
             await update.message.reply_text(
-                f"{p['emoji']} Personality switched to *{p['name']}*\n\n"
-                f"_{p['system_prompt']}_",
-                parse_mode="Markdown"
+                f"{p['emoji']} Personality switched to *{p['name']}*\n\n_{p['system_prompt']}_",
+                parse_mode="Markdown",
             )
         else:
             available = ", ".join(ElizaOSIntegration.PERSONALITIES.keys())
             await update.message.reply_text(
-                f"⚠️ Unknown personality `{name}`.\n\nAvailable: {available}",
-                parse_mode="Markdown"
+                f"⚠️ Unknown personality `{name}`.\n\nAvailable: {available}", parse_mode="Markdown"
             )
 
     elif subcommand == "list":
@@ -72,26 +71,25 @@ async def eliza_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"• *Available:* {available}\n\n"
             f"Use `/eliza set <mode>` to switch.\n"
             f"Use `/eliza <prompt>` to enhance a prompt.",
-            parse_mode="Markdown"
+            parse_mode="Markdown",
         )
 
     else:
         prompt_text = text.split(None, 1)[1] if len(text.split(None, 1)) > 1 else ""
         if not prompt_text:
             await update.message.reply_text(
-                "Usage: `/eliza <prompt>` to enhance a prompt.",
-                parse_mode="Markdown"
+                "Usage: `/eliza <prompt>` to enhance a prompt.", parse_mode="Markdown"
             )
             return
 
         ctx = eliza.enhance(chat_id, prompt_text)
         p = eliza.get_personality(chat_id)
 
-        recent = ctx['messages'][-5:]
+        recent = ctx["messages"][-5:]
         context_lines = []
         for msg in recent:
-            role_label = "👤 User" if msg['role'] == 'user' else "🤖 Assistant"
-            content = msg['content']
+            role_label = "👤 User" if msg["role"] == "user" else "🤖 Assistant"
+            content = msg["content"]
             if len(content) > 200:
                 content = content[:200] + "..."
             context_lines.append(f"  {role_label}: {content}")
@@ -104,5 +102,5 @@ async def eliza_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"*Conversation Context ({len(ctx['messages'])} msgs):*\n{context_block}\n\n"
             f"*Your Input:*\n`{prompt_text}`\n\n"
             f"_Ready to send to any LLM API._",
-            parse_mode="Markdown"
+            parse_mode="Markdown",
         )

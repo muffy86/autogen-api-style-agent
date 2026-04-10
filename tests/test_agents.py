@@ -1,80 +1,196 @@
-import subprocess
+from __future__ import annotations
+
+from collections.abc import Callable
+from unittest.mock import MagicMock
+
 import pytest
-from unittest.mock import patch, MagicMock
+from autogen_agentchat.agents import AssistantAgent
 
-from nanoclaw_bot.agents import AgentManager
-
-
-class TestValidateTmux:
-    @patch("nanoclaw_bot.agents.shutil.which", return_value="/usr/bin/tmux")
-    def test_validate_tmux_installed(self, mock_which):
-        mgr = AgentManager()
-        mock_which.assert_called_once_with("tmux")
-
-    @patch("nanoclaw_bot.agents.shutil.which", return_value=None)
-    def test_validate_tmux_missing(self, mock_which):
-        with pytest.raises(RuntimeError):
-            AgentManager()
+from autogen_api_agent.agents import (
+    create_architect,
+    create_coder,
+    create_devops,
+    create_orchestrator,
+    create_researcher,
+    create_reviewer,
+    create_tester,
+    create_writer,
+)
+from autogen_api_agent.agents.base import create_agent, get_tools
 
 
-class TestSessionName:
-    @patch("nanoclaw_bot.agents.shutil.which", return_value="/usr/bin/tmux")
-    def test_session_name(self, mock_which):
-        mgr = AgentManager()
-        assert mgr._session_name("myagent") == "nanoclaw_agent_myagent"
+def _tool_names(agent: AssistantAgent) -> set[str]:
+    return {tool.name for tool in agent._tools}
 
 
-class TestStartAgent:
-    @patch("nanoclaw_bot.agents.shutil.which", return_value="/usr/bin/tmux")
-    def test_start_agent_success(self, mock_which):
-        mgr = AgentManager()
-        with patch.object(mgr, "is_session_running", return_value=False), \
-             patch.object(mgr, "_run") as mock_run:
-            result = mgr.start_agent("myagent", "python agent.py")
-            assert result is True
-            mock_run.assert_called_once()
+@pytest.mark.parametrize(
+    ("factory", "expected_name"),
+    [
+        (create_coder, "coder"),
+        (create_reviewer, "reviewer"),
+        (create_researcher, "researcher"),
+        (create_architect, "architect"),
+        (create_tester, "tester"),
+        (create_writer, "writer"),
+        (create_devops, "devops"),
+        (create_orchestrator, "orchestrator"),
+    ],
+)
+def test_create_agent_functions_return_assistant_agents_with_correct_names(
+    factory: Callable,
+    expected_name: str,
+) -> None:
+    agent = factory(MagicMock())
 
-    @patch("nanoclaw_bot.agents.shutil.which", return_value="/usr/bin/tmux")
-    def test_start_agent_already_running(self, mock_which):
-        mgr = AgentManager()
-        with patch.object(mgr, "is_session_running", return_value=True):
-            result = mgr.start_agent("myagent", "python agent.py")
-            assert result is False
-
-
-class TestStopAgent:
-    @patch("nanoclaw_bot.agents.shutil.which", return_value="/usr/bin/tmux")
-    def test_stop_agent_success(self, mock_which):
-        mgr = AgentManager()
-        with patch.object(mgr, "is_session_running", return_value=True), \
-             patch.object(mgr, "_run") as mock_run:
-            result = mgr.stop_agent("myagent")
-            assert result is True
-            mock_run.assert_called_once()
-
-    @patch("nanoclaw_bot.agents.shutil.which", return_value="/usr/bin/tmux")
-    def test_stop_agent_not_running(self, mock_which):
-        mgr = AgentManager()
-        with patch.object(mgr, "is_session_running", return_value=False):
-            result = mgr.stop_agent("myagent")
-            assert result is False
+    assert isinstance(agent, AssistantAgent)
+    assert agent.name == expected_name
 
 
-class TestListSessions:
-    @patch("nanoclaw_bot.agents.shutil.which", return_value="/usr/bin/tmux")
-    def test_list_sessions(self, mock_which):
-        mgr = AgentManager()
-        mock_result = MagicMock()
-        mock_result.returncode = 0
-        mock_result.stdout = (
-            "nanoclaw_agent_openai\n"
-            "nanoclaw_agent_mistral\n"
-            "my_other_session\n"
-            "dev_server\n"
-        )
-        with patch.object(mgr, "_run", return_value=mock_result):
-            sessions = mgr.list_sessions()
-            assert len(sessions) == 2
-            names = [s.name for s in sessions]
-            assert "openai" in names
-            assert "mistral" in names
+def test_create_coder_has_file_ops_shell_and_code_analysis_tools() -> None:
+    agent = create_coder(MagicMock())
+
+    assert _tool_names(agent) == {
+        "read_file",
+        "write_file",
+        "list_directory",
+        "search_files",
+        "find_in_files",
+        "run_command",
+        "analyze_python_file",
+        "check_syntax",
+    }
+
+
+def test_create_reviewer_has_file_ops_and_code_analysis_tools() -> None:
+    agent = create_reviewer(MagicMock())
+
+    assert _tool_names(agent) == {
+        "read_file",
+        "write_file",
+        "list_directory",
+        "search_files",
+        "find_in_files",
+        "analyze_python_file",
+        "check_syntax",
+    }
+
+
+def test_create_researcher_has_web_search_and_github_tools() -> None:
+    agent = create_researcher(MagicMock())
+
+    assert _tool_names(agent) == {
+        "web_search",
+        "fetch_url",
+        "get_repo_info",
+        "list_issues",
+        "create_issue",
+        "get_pr_diff",
+    }
+
+
+def test_create_architect_has_file_ops_and_code_analysis_tools() -> None:
+    agent = create_architect(MagicMock())
+
+    assert _tool_names(agent) == {
+        "read_file",
+        "write_file",
+        "list_directory",
+        "search_files",
+        "find_in_files",
+        "analyze_python_file",
+        "check_syntax",
+    }
+
+
+def test_create_tester_has_file_ops_shell_and_code_analysis_tools() -> None:
+    agent = create_tester(MagicMock())
+
+    assert _tool_names(agent) == {
+        "read_file",
+        "write_file",
+        "list_directory",
+        "search_files",
+        "find_in_files",
+        "run_command",
+        "analyze_python_file",
+        "check_syntax",
+    }
+
+
+def test_create_writer_has_file_ops_and_web_search_tools() -> None:
+    agent = create_writer(MagicMock())
+
+    assert _tool_names(agent) == {
+        "read_file",
+        "write_file",
+        "list_directory",
+        "search_files",
+        "find_in_files",
+        "web_search",
+        "fetch_url",
+    }
+
+
+def test_create_devops_has_file_ops_and_shell_tools() -> None:
+    agent = create_devops(MagicMock())
+
+    assert _tool_names(agent) == {
+        "read_file",
+        "write_file",
+        "list_directory",
+        "search_files",
+        "find_in_files",
+        "run_command",
+    }
+
+
+def test_create_orchestrator_has_no_tools_by_default() -> None:
+    agent = create_orchestrator(MagicMock())
+
+    assert agent._tools == []
+
+
+def test_get_tools_returns_correct_tools_for_each_set() -> None:
+    assert {tool.__name__ for tool in get_tools("file_ops")} == {
+        "read_file",
+        "write_file",
+        "list_directory",
+        "search_files",
+        "find_in_files",
+    }
+    assert {tool.__name__ for tool in get_tools("web_search")} == {"web_search", "fetch_url"}
+    assert {tool.__name__ for tool in get_tools("github")} == {
+        "get_repo_info",
+        "list_issues",
+        "create_issue",
+        "get_pr_diff",
+    }
+    assert {tool.__name__ for tool in get_tools("shell")} == {"run_command"}
+    assert {tool.__name__ for tool in get_tools("code_analysis")} == {
+        "analyze_python_file",
+        "check_syntax",
+    }
+
+
+def test_get_tools_returns_empty_list_for_unknown_tool_set() -> None:
+    assert get_tools("does_not_exist") == []
+
+
+def test_create_agent_helper_works_with_tool_sets() -> None:
+    agent = create_agent(
+        name="helper",
+        system_message="help",
+        model_client=MagicMock(),
+        tool_sets=["file_ops", "shell"],
+    )
+
+    assert isinstance(agent, AssistantAgent)
+    assert agent.name == "helper"
+    assert _tool_names(agent) == {
+        "read_file",
+        "write_file",
+        "list_directory",
+        "search_files",
+        "find_in_files",
+        "run_command",
+    }

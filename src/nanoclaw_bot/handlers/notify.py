@@ -1,8 +1,10 @@
 import logging
+
 from telegram import Update
 from telegram.ext import ContextTypes
-from nanoclaw_bot.security import owner_only
+
 from nanoclaw_bot.agents import AgentManager
+from nanoclaw_bot.security import owner_only
 
 logger = logging.getLogger("nanoclaw_bot.notify")
 
@@ -38,14 +40,20 @@ async def check_agents_job(context: ContextTypes.DEFAULT_TYPE):
                 manager.start_agent(name, info["command"], info.get("working_dir"))
                 await context.bot.send_message(
                     chat_id=owner_id,
-                    text=f"⚠️ Agent `{name}` crashed!\n🔄 Auto-restarted with: `{info['command']}`",
+                    text=(
+                        f"⚠️ Agent `{name}` crashed!\n🔄 Auto-restarted with: `{info['command']}`"
+                    ),
                     parse_mode="Markdown",
                 )
                 logger.warning(f"Agent {name} crashed, auto-restarted")
             else:
                 await context.bot.send_message(
                     chat_id=owner_id,
-                    text=f"🚨 Agent `{name}` has stopped!\nRestart with: `/agents start {name} {info.get('command', '<cmd>')}`",
+                    text=(
+                        f"🚨 Agent `{name}` has stopped!\n"
+                        f"Restart with: `/agents start {name} "
+                        f"{info.get('command', '<cmd>')}`"
+                    ),
                     parse_mode="Markdown",
                 )
                 del watched[name]
@@ -78,7 +86,8 @@ async def notify_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         await update.message.reply_text(
             f"🔔 Agent monitoring *enabled* (checking every {POLL_INTERVAL}s).\n"
-            f"Auto-restart: {'✅ on' if context.bot_data.get('notify_autorestart') else '❌ off'}\n\n"
+            "Auto-restart: "
+            f"{'✅ on' if context.bot_data.get('notify_autorestart') else '❌ off'}\n\n"
             f"Agents started via `/agents start` will be automatically watched.",
             parse_mode="Markdown",
         )
@@ -89,9 +98,7 @@ async def notify_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             job.schedule_removal()
         context.bot_data["notify_enabled"] = False
         context.bot_data["notify_job"] = None
-        await update.message.reply_text(
-            "🔕 Agent monitoring *disabled*.", parse_mode="Markdown"
-        )
+        await update.message.reply_text("🔕 Agent monitoring *disabled*.", parse_mode="Markdown")
 
     elif subcommand == "autorestart":
         arg = parts[2].lower() if len(parts) > 2 else ""
@@ -103,9 +110,7 @@ async def notify_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
         elif arg == "off":
             context.bot_data["notify_autorestart"] = False
-            await update.message.reply_text(
-                "🔄 Auto-restart *disabled*.", parse_mode="Markdown"
-            )
+            await update.message.reply_text("🔄 Auto-restart *disabled*.", parse_mode="Markdown")
         else:
             await update.message.reply_text(
                 "Usage: `/notify autorestart on|off`", parse_mode="Markdown"

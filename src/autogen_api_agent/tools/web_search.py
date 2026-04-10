@@ -37,9 +37,7 @@ async def web_search(query: str, max_results: int = 5) -> str:
 async def fetch_url(url: str) -> str:
     """Fetch a web page and return its text content (truncated to ~4000 chars)."""
     try:
-        async with httpx.AsyncClient(
-            follow_redirects=True, timeout=15.0
-        ) as client:
+        async with httpx.AsyncClient(follow_redirects=True, timeout=15.0) as client:
             resp = await client.get(
                 url,
                 headers={
@@ -52,9 +50,7 @@ async def fetch_url(url: str) -> str:
             resp.raise_for_status()
             content_type = resp.headers.get("content-type", "")
 
-            text = (
-                _strip_html(resp.text) if "text/html" in content_type else resp.text
-            )
+            text = _strip_html(resp.text) if "text/html" in content_type else resp.text
 
             if len(text) > 4000:
                 text = text[:4000] + "\n\n... [truncated]"

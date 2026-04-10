@@ -1,10 +1,12 @@
-import os
-import sys
 import asyncio
 import logging
+import os
+import sys
 from pathlib import Path
+
 from telegram import Update
 from telegram.ext import ContextTypes
+
 from nanoclaw_bot.security import owner_only
 
 logger = logging.getLogger("nanoclaw_bot.update")
@@ -60,7 +62,7 @@ async def update_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if code != 0:
         await update.message.reply_text(
             f"❌ Git pull failed (exit {code}):\n```\n{stderr or stdout}\n```",
-            parse_mode="Markdown"
+            parse_mode="Markdown",
         )
         logger.error(f"Update failed: git pull exit={code}: {stderr}")
         return
@@ -79,7 +81,7 @@ async def update_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if code != 0:
         await update.message.reply_text(
             f"❌ pip install failed (exit {code}):\n```\n{stderr[:1000]}\n```",
-            parse_mode="Markdown"
+            parse_mode="Markdown",
         )
         logger.error(f"Update failed: pip install exit={code}: {stderr}")
         return
@@ -89,13 +91,11 @@ async def update_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         git_output = git_output[:1000] + "\n..."
 
     await update.message.reply_text(
-        f"✅ *Update complete!*\n\n"
-        f"```\n{git_output}\n```\n\n"
-        f"🔄 Restarting bot in 2 seconds...",
-        parse_mode="Markdown"
+        f"✅ *Update complete!*\n\n```\n{git_output}\n```\n\n🔄 Restarting bot in 2 seconds...",
+        parse_mode="Markdown",
     )
 
-    logger.info(f"Update successful. Restarting bot process...")
+    logger.info("Update successful. Restarting bot process...")
 
     # Give Telegram time to deliver the message
     await asyncio.sleep(2)

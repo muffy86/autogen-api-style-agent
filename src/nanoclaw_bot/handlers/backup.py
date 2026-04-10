@@ -1,15 +1,17 @@
 import json
-import sys
-import time
 import logging
+import sys
 import tempfile
-from pathlib import Path
+import time
 from datetime import datetime, timezone
+from pathlib import Path
+
 from telegram import Update
 from telegram.ext import ContextTypes
+
 from nanoclaw_bot import __version__
-from nanoclaw_bot.security import owner_only
 from nanoclaw_bot.config import ConfigManager
+from nanoclaw_bot.security import owner_only
 
 logger = logging.getLogger("nanoclaw_bot.backup")
 
@@ -26,6 +28,7 @@ async def backup_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     agent_sessions = []
     try:
         from nanoclaw_bot.agents import AgentManager
+
         mgr = AgentManager()
         for s in mgr.list_sessions():
             agent_sessions.append({"name": s.name, "running": s.running})
@@ -62,12 +65,13 @@ async def backup_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         temp_path = f.name
 
     try:
-        await update.message.reply_document(
-            document=open(temp_path, "rb"),
-            filename=f"nanoclaw_backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
-            caption="📦 *NanoClaw Bot Backup*\n\nContains config summary (no secrets).",
-            parse_mode="Markdown"
-        )
+        with open(temp_path, "rb") as document:
+            await update.message.reply_document(
+                document=document,
+                filename=f"nanoclaw_backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
+                caption="📦 *NanoClaw Bot Backup*\n\nContains config summary (no secrets).",
+                parse_mode="Markdown",
+            )
         logger.info("Backup exported successfully")
     finally:
         Path(temp_path).unlink(missing_ok=True)

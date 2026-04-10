@@ -1,5 +1,6 @@
-import pytest
 from unittest.mock import AsyncMock, MagicMock
+
+import pytest
 
 from nanoclaw_bot.handlers.configure import configure_handler
 
@@ -20,9 +21,7 @@ def _make_mocks(text, user_id=12345678, owner_id=12345678):
 
 @pytest.mark.asyncio
 async def test_configure_valid_keys():
-    update, context, config = _make_mocks(
-        "/configure OPENAI_API_KEY=sk-123 MISTRAL_API_KEY=xm-456"
-    )
+    update, context, config = _make_mocks("/configure OPENAI_API_KEY=sk-123 MISTRAL_API_KEY=xm-456")
     await configure_handler(update, context)
     config.set_many.assert_called_once_with(
         {"OPENAI_API_KEY": "sk-123", "MISTRAL_API_KEY": "xm-456"}

@@ -1,7 +1,8 @@
 from telegram import Update
 from telegram.ext import ContextTypes
-from nanoclaw_bot.security import owner_only
+
 from nanoclaw_bot.agents import AgentManager
+from nanoclaw_bot.security import owner_only
 
 
 def _get_agent_manager(context: ContextTypes.DEFAULT_TYPE) -> AgentManager:
@@ -29,12 +30,15 @@ async def agents_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if subcommand == "list":
         sessions = manager.list_sessions()
         if not sessions:
-            await update.message.reply_text("🔌 No agent sessions running.\n\nStart one with: `/agents start <name> <command>`", parse_mode="Markdown")
+            await update.message.reply_text(
+                "🔌 No agent sessions running.\n\nStart one with: `/agents start <name> <command>`",
+                parse_mode="Markdown",
+            )
             return
         lines = [f"• `{s.name}` — {'🟢 running' if s.running else '🔴 stopped'}" for s in sessions]
         await update.message.reply_text(
             f"🤖 *Agent Sessions* ({len(sessions)}):\n\n" + "\n".join(lines),
-            parse_mode="Markdown"
+            parse_mode="Markdown",
         )
 
     elif subcommand == "start":
@@ -44,7 +48,7 @@ async def agents_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text(
                 "Usage: `/agents start <name> <command>`\n\n"
                 "Example: `/agents start myagent npm start`",
-                parse_mode="Markdown"
+                parse_mode="Markdown",
             )
             return
         name, command = start_parts
@@ -53,9 +57,16 @@ async def agents_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             if "watched_agents" not in context.bot_data:
                 context.bot_data["watched_agents"] = {}
             context.bot_data["watched_agents"][name] = {"command": command, "working_dir": None}
-            await update.message.reply_text(f"✅ Agent `{name}` started.\nCommand: `{command}`", parse_mode="Markdown")
+            await update.message.reply_text(
+                f"✅ Agent `{name}` started.\nCommand: `{command}`",
+                parse_mode="Markdown",
+            )
         else:
-            await update.message.reply_text(f"⚠️ Agent `{name}` is already running.\nUse `/agents restart {name} {command}` to restart.", parse_mode="Markdown")
+            await update.message.reply_text(
+                f"⚠️ Agent `{name}` is already running.\n"
+                f"Use `/agents restart {name} {command}` to restart.",
+                parse_mode="Markdown",
+            )
 
     elif subcommand == "stop":
         name = args.strip()
@@ -68,19 +79,24 @@ async def agents_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             watched.pop(name, None)
             await update.message.reply_text(f"🛑 Agent `{name}` stopped.", parse_mode="Markdown")
         else:
-            await update.message.reply_text(f"⚠️ Agent `{name}` is not running.", parse_mode="Markdown")
+            await update.message.reply_text(
+                f"⚠️ Agent `{name}` is not running.",
+                parse_mode="Markdown",
+            )
 
     elif subcommand == "restart":
         start_parts = args.split(None, 1)
         if len(start_parts) < 2:
             await update.message.reply_text(
-                "Usage: `/agents restart <name> <command>`",
-                parse_mode="Markdown"
+                "Usage: `/agents restart <name> <command>`", parse_mode="Markdown"
             )
             return
         name, command = start_parts
         manager.restart_agent(name, command)
-        await update.message.reply_text(f"🔄 Agent `{name}` restarted.\nCommand: `{command}`", parse_mode="Markdown")
+        await update.message.reply_text(
+            f"🔄 Agent `{name}` restarted.\nCommand: `{command}`",
+            parse_mode="Markdown",
+        )
 
     elif subcommand == "logs":
         name = args.strip()
@@ -89,14 +105,23 @@ async def agents_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
         log = manager.get_session_log(name)
         if log is None:
-            await update.message.reply_text(f"⚠️ Agent `{name}` not found or not running.", parse_mode="Markdown")
+            await update.message.reply_text(
+                f"⚠️ Agent `{name}` not found or not running.",
+                parse_mode="Markdown",
+            )
         elif not log.strip():
-            await update.message.reply_text(f"📋 Agent `{name}` — no output yet.", parse_mode="Markdown")
+            await update.message.reply_text(
+                f"📋 Agent `{name}` — no output yet.",
+                parse_mode="Markdown",
+            )
         else:
             # Truncate if too long for Telegram (4096 char limit)
             if len(log) > 3900:
                 log = log[-3900:]
-            await update.message.reply_text(f"📋 *Agent `{name}` logs:*\n\n```\n{log}\n```", parse_mode="Markdown")
+            await update.message.reply_text(
+                f"📋 *Agent `{name}` logs:*\n\n```\n{log}\n```",
+                parse_mode="Markdown",
+            )
 
     else:
         await update.message.reply_text(
@@ -106,5 +131,5 @@ async def agents_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "• `/agents stop <name>`\n"
             "• `/agents restart <name> <cmd>`\n"
             "• `/agents logs <name>`",
-            parse_mode="Markdown"
+            parse_mode="Markdown",
         )

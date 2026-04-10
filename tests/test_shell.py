@@ -1,6 +1,8 @@
+from unittest.mock import AsyncMock, MagicMock
+
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
-from nanoclaw_bot.handlers.shell import shell_handler, BLOCKED_PATTERNS
+
+from nanoclaw_bot.handlers.shell import shell_handler
 
 
 def _make_mocks(text, user_id=12345678, owner_id=12345678):
@@ -8,12 +10,12 @@ def _make_mocks(text, user_id=12345678, owner_id=12345678):
     update.effective_user.id = user_id
     update.message.text = text
     update.message.reply_text = AsyncMock()
-    
+
     context = MagicMock()
     config = MagicMock()
     config.get_owner_chat_id.return_value = owner_id
     context.bot_data = {"config": config}
-    
+
     return update, context
 
 
