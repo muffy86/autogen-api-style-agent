@@ -77,7 +77,7 @@ async def _run_webhook_agent(
         _webhook_jobs[job_id] = {"status": "failed", "error": "Agent execution failed"}
 
 
-@router.post("/github")
+@router.post("/github", status_code=202)
 async def github_webhook(
     request: Request,
     background_tasks: BackgroundTasks,
