@@ -1,93 +1,92 @@
-import os
-from unittest.mock import patch
+from __future__ import annotations
 
 import pytest
 
-from nanoclaw_bot.config import ConfigManager
+from autogen_api_agent.config import AppConfig, ProviderConfig, get_config
+
+_PROVIDER_ENV_VARS = [
+    "OPENAI_API_KEY",
+    "OPENAI_MODEL",
+    "TOGETHER_API_KEY",
+    "TOGETHER_MODEL",
+    "OPENROUTER_API_KEY",
+    "OPENROUTER_MODEL",
+    "GOOGLE_API_KEY",
+    "GOOGLE_MODEL",
+    "MOONSHOT_API_KEY",
+    "KIMI_MODEL",
+    "MISTRAL_API_KEY",
+    "MISTRAL_MODEL",
+]
 
 
-class TestMaskValue:
-    def test_mask_value_long_string(self):
-        assert ConfigManager.mask_value("sk-abc123xyz") == "••••3xyz"
-
-    def test_mask_value_short_string(self):
-        assert ConfigManager.mask_value("abc") == "••••"
-
-    def test_mask_value_exact_length(self):
-        assert ConfigManager.mask_value("abcd") == "••••"
-
-    def test_mask_value_custom_visible(self):
-        assert ConfigManager.mask_value("sk-abc123xyz", visible=6) == "••••123xyz"
+@pytest.fixture
+def clear_provider_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    for key in _PROVIDER_ENV_VARS:
+        monkeypatch.delenv(key, raising=False)
 
 
-class TestGetBotToken:
-    def test_get_bot_token_success(self, tmp_env):
-        config = ConfigManager(env_path=tmp_env)
-        assert config.get_bot_token() == "test-token-123"
+def test_provider_config_loads_defaults_with_no_env_vars_set(
+    clear_provider_env: None,
+) -> None:
+    config = ProviderConfig(_env_file=None)
 
-    def test_get_bot_token_missing(self, tmp_path):
-        env_file = tmp_path / ".env"
-        env_file.write_text("")
-        config = ConfigManager(env_path=env_file)
-        with pytest.raises(ValueError):
-            config.get_bot_token()
-
-
-class TestGetOwnerChatId:
-    def test_get_owner_chat_id_success(self, tmp_env):
-        config = ConfigManager(env_path=tmp_env)
-        assert config.get_owner_chat_id() == 12345678
-
-    def test_get_owner_chat_id_missing(self, tmp_path):
-        env_file = tmp_path / ".env"
-        env_file.write_text("")
-        config = ConfigManager(env_path=env_file)
-        with pytest.raises(ValueError):
-            config.get_owner_chat_id()
+    assert config.openai_api_key is None
+    assert config.openai_model == "gpt-4o"
+    assert config.together_api_key is None
+    assert config.together_model == "meta-llama/Llama-3.3-70B-Instruct-Turbo"
+    assert config.openrouter_api_key is None
+    assert config.openrouter_model == "openai/gpt-4o"
+    assert config.google_api_key is None
+    assert config.google_model == "gemini-2.0-flash"
+    assert config.moonshot_api_key is None
+    assert config.kimi_model == "kimi-k2.5"
+    assert config.mistral_api_key is None
+    assert config.mistral_model == "mistral-large-latest"
 
 
-class TestSetAndGet:
-    def test_set_and_get(self, tmp_path):
-        env_file = tmp_path / ".env"
-        env_file.write_text("")
-        config = ConfigManager(env_path=env_file)
-        config.set("NEW_KEY", "new_value")
-        assert config.get("NEW_KEY") == "new_value"
+def test_provider_config_available_providers_returns_empty_list_with_no_keys(
+    clear_provider_env: None,
+) -> None:
+    config = ProviderConfig(_env_file=None)
 
-    def test_set_many(self, tmp_path):
-        env_file = tmp_path / ".env"
-        env_file.write_text("")
-        config = ConfigManager(env_path=env_file)
-        config.set_many({"KEY_A": "val_a", "KEY_B": "val_b", "KEY_C": "val_c"})
-        assert config.get("KEY_A") == "val_a"
-        assert config.get("KEY_B") == "val_b"
-        assert config.get("KEY_C") == "val_c"
+    assert config.available_providers() == []
 
 
-class TestGetAllApiKeys:
-    def test_get_all_api_keys(self, tmp_env):
-        config = ConfigManager(env_path=tmp_env)
-        keys = config.get_all_api_keys()
-        assert "OPENAI_API_KEY" in keys
-        assert "MISTRAL_API_KEY" in keys
-        assert "TELEGRAM_BOT_TOKEN" not in keys
-        assert "TELEGRAM_OWNER_CHAT_ID" not in keys
+def test_provider_config_available_providers_detects_keys(
+    clear_provider_env: None,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-openai")
+    monkeypatch.setenv("GOOGLE_API_KEY", "google-key")
+    monkeypatch.setenv("MISTRAL_API_KEY", "mistral-key")
+
+    config = ProviderConfig(_env_file=None)
+
+    assert config.available_providers() == ["openai", "google", "mistral"]
 
 
-class TestEnsureEnvFile:
-    def test_ensure_env_file_creates_with_permissions(self, tmp_path):
-        env_file = tmp_path / "subdir" / ".env"
-        config = ConfigManager(env_path=env_file)
-        config.ensure_env_file()
-        assert env_file.exists()
-        mode = env_file.stat().st_mode & 0o777
-        assert mode == 0o600
+def test_app_config_has_expected_defaults(clear_provider_env: None) -> None:
+    config = AppConfig(_env_file=None)
+
+    assert config.host == "0.0.0.0"
+    assert config.port == 8000
+    assert config.debug is False
+    assert config.default_provider == "openai"
+    assert config.default_team == "productivity"
+    assert config.max_turns == 30
+    assert config.timeout_seconds == 300
+    assert config.session_ttl_minutes == 60
+    assert isinstance(config.providers, ProviderConfig)
 
 
-class TestGetFallback:
-    def test_get_falls_back_to_env_var(self, tmp_path):
-        env_file = tmp_path / ".env"
-        env_file.write_text("")
-        config = ConfigManager(env_path=env_file)
-        with patch.dict(os.environ, {"FALLBACK_TEST_KEY": "from_environ"}):
-            assert config.get("FALLBACK_TEST_KEY") == "from_environ"
+def test_get_config_returns_app_config_instance(
+    clear_provider_env: None,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+
+    config = get_config()
+
+    assert isinstance(config, AppConfig)
