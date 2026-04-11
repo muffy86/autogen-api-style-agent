@@ -271,9 +271,7 @@ Returns the stored message history for an active, non-expired session.
 curl http://localhost:8000/v1/sessions/demo-session-001
 ```
 
-## `POST /github-webhook`
-
-The current FastAPI router mounts the GitHub webhook handler at `POST /webhooks/github`. If you previously used `/github-webhook`, update clients to the mounted route.
+## `POST /webhooks/github`
 
 This endpoint verifies `X-Hub-Signature-256` when `GITHUB_WEBHOOK_SECRET` is configured, accepts supported GitHub events, and returns immediately while agent execution continues in a background job.
 
