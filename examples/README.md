@@ -22,3 +22,7 @@ python examples/01_quick_chat.py
 - `04_research_team.py` — streaming output from the `research` team.
 - `05_session_continuity.py` — manual session history management across multiple turns.
 - `06_provider_fallback.py` — provider detection and best-available client selection.
+
+## Quick Start
+
+Make sure you have configured your API keys in `.env` before running examples.
