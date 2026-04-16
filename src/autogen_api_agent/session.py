@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 
 class Session:
@@ -11,16 +11,16 @@ class Session:
     def __init__(self, session_id: str, ttl_minutes: int = 60):
         self.session_id = session_id
         self.history: list[dict[str, str]] = []
-        self.created_at = datetime.now(timezone.utc)
-        self.last_active = datetime.now(timezone.utc)
+        self.created_at = datetime.now(UTC)
+        self.last_active = datetime.now(UTC)
         self.ttl = timedelta(minutes=ttl_minutes)
 
     @property
     def is_expired(self) -> bool:
-        return datetime.now(timezone.utc) - self.last_active > self.ttl
+        return datetime.now(UTC) - self.last_active > self.ttl
 
     def add_message(self, role: str, content: str) -> None:
-        self.last_active = datetime.now(timezone.utc)
+        self.last_active = datetime.now(UTC)
         self.history.append({"role": role, "content": content})
 
     def get_history(self) -> list[dict[str, str]]:
@@ -28,7 +28,7 @@ class Session:
 
     def clear(self) -> None:
         self.history.clear()
-        self.last_active = datetime.now(timezone.utc)
+        self.last_active = datetime.now(UTC)
 
 
 class SessionManager:
