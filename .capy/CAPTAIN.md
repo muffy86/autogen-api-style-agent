@@ -1,9 +1,8 @@
-- Multi-agent productivity system using AutoGen v0.7.5
-- 6 LLM providers: OpenAI, Together.ai, OpenRouter, Google Gemini, Kimi K2.5, Mistral
-- 8 agents: orchestrator, coder, reviewer, researcher, architect, tester, writer, devops
-- 4 team compositions: productivity (8), code_review (3), research (3), quick (1)
+- Hybrid repo: SvelteKit 2 frontend + Python AutoGen v0.7.5 backend
+- Frontend: Svelte 5, AI SDK (OpenAI/Anthropic/Google/Groq/xAI), Supabase auth+db, Vercel deploy
+- Backend: 6 LLM providers, 8 agents, 4 team compositions
 - Interfaces: FastAPI HTTP API, Typer CLI, MCP server, GitHub webhooks
 - IDE integration: Trae.ai MCP + custom agents, Claude Code CLAUDE.md
-- Bootstrap: one-command setup scripts for Unix/Windows
-- Docker: multi-stage build with docker-compose for API + MCP services
-- CI: GitHub Actions with lint → test (matrix 3.10-3.12) → docker build
+- Docker: multi-stage build (Python only), docker-compose for API services
+- CI: GitHub Actions with ruff lint → pytest (matrix 3.10-3.12) → docker build
+- Frontend and backend are loosely coupled — changes to one rarely affect the other
