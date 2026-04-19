@@ -47,9 +47,14 @@
   function startEditKey(provider: string) {
     editingKey = provider;
     keyInputValue = apiKeyStore.getKey(provider);
+    showKey[provider] = false;
   }
 
   function saveKey(provider: string) {
+    if (!keyInputValue.trim()) {
+      cancelEditKey();
+      return;
+    }
     apiKeyStore.setKey(provider, keyInputValue);
     editingKey = null;
     keyInputValue = '';
