@@ -12,7 +12,7 @@
     },
     "filesystem": {
       "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-filesystem", "~/sovereign-workspace"],
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "${SOVEREIGN_WORKSPACE_DIR}"],
       "env": {}
     }
   }

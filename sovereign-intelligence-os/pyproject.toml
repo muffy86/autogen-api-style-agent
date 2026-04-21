@@ -26,9 +26,8 @@ dependencies = [
 
 [project.optional-dependencies]
 cv = ["opencv-python-headless>=4.9.0", "numpy>=1.26.0"]
-browser = ["playwright>=1.47.0"]
 dev = ["pytest>=8.0.0", "pytest-asyncio>=0.23.0", "httpx>=0.28.0", "ruff>=0.6.0"]
-all = ["sovereign-intelligence-os[cv,browser,dev]"]
+all = ["sovereign-intelligence-os[cv,dev]"]
 
 [project.scripts]
 sovereign-orchestrator = "orchestrator.__main__:main"

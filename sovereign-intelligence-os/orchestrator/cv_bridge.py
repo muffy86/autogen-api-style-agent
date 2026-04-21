@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import os
 import shutil
 import subprocess
 import tempfile
@@ -14,7 +15,10 @@ def capture_screen(output: Path | None = None) -> Path | None:
     if shutil.which("termux-screencap") is None:
         log.warning("termux-screencap not available; skipping capture")
         return None
-    output = output or Path(tempfile.mkstemp(suffix=".png")[1])
+    if output is None:
+        fd, path = tempfile.mkstemp(suffix=".png")
+        os.close(fd)
+        output = Path(path)
     try:
         subprocess.run(["termux-screencap", str(output)], check=True, timeout=10)
     except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:

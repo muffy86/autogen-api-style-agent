@@ -10,6 +10,10 @@ if [ -z "${PREFIX:-}" ] || [[ "$PREFIX" != */com.termux/* ]]; then
   warn "This script is designed for Termux. Continuing anyway."
 fi
 
+if [ -z "${VIRTUAL_ENV:-}" ] && [ -z "${PREFIX:-}" ]; then
+  warn "No active virtualenv or Termux PREFIX detected. pip will install into the system Python."
+fi
+
 log "Updating Termux packages"
 pkg update -y
 pkg upgrade -y
@@ -37,7 +41,7 @@ npm install -g @modelcontextprotocol/server-filesystem
 
 log "Bootstrapping Python env"
 python -m pip install --upgrade pip
-python -m pip install --user -r "$(dirname "$0")/requirements.txt"
+python -m pip install -r "$(dirname "$0")/requirements.txt"
 
 # Playwright: use system chromium, skip browser downloads
 export PLAYWRIGHT_BROWSERS_PATH=0

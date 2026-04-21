@@ -7,7 +7,7 @@ from typing import Annotated, Any
 from fastapi import Depends, FastAPI, Header, HTTPException, status
 from pydantic import BaseModel, Field
 
-from .config import settings
+from .config import _PLACEHOLDER_TOKEN, require_production_token, settings
 from .identity import build_system_prompt, load_identity
 from .mcp_bridge import MCPServer, load_mcp_config
 from .memory import ForeverMemory
@@ -37,9 +37,13 @@ state: dict[str, Any] = {}
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
+    require_production_token()
     state["memory"] = ForeverMemory(settings.memory_path)
     state["identity"] = load_identity(settings.identity_path)
-    state["router"] = LLMRouter(default_model=settings.default_model)
+    state["router"] = LLMRouter(
+        default_model=settings.default_model,
+        timeout=settings.request_timeout_seconds,
+    )
     state["mcp_servers"] = load_mcp_config(settings.mcp_servers_config)
     log.info(
         "Sovereign OS ready: memory_entries=%s identity_loaded=%s mcp_servers=%s",
@@ -55,6 +59,11 @@ app = FastAPI(title="Sovereign Intelligence OS", version="2026.5.0", lifespan=li
 
 
 def _verify_token(x_sovereign_token: Annotated[str | None, Header()] = None) -> None:
+    if not x_sovereign_token or x_sovereign_token == _PLACEHOLDER_TOKEN:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="bad token",
+        )
     if x_sovereign_token != settings.trigger_token:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -127,7 +136,7 @@ async def memory_add(doc: dict[str, Any]) -> dict[str, Any]:
     return {"ok": True, "id": memory_id}
 
 
-@app.get("/memory/query")
+@app.get("/memory/query", dependencies=[Depends(_verify_token)])
 async def memory_query(q: str, n: int = 5) -> dict[str, Any]:
     memory: ForeverMemory = state["memory"]
     return {"results": memory.query(q, n_results=n)}

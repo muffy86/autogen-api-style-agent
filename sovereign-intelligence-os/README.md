@@ -4,17 +4,25 @@ Private Termux-hosted companion subsystem for Galaxy Fold 7 class Android device
 
 Status: self-contained under `sovereign-intelligence-os/`. It does not change the root project's Python dependency graph.
 
-Quick start:
+Quick start — Termux / on-device (recommended on Galaxy Fold 7):
+
+```bash
+cd sovereign-intelligence-os
+bash install-termux-phase1.sh
+cp .env.example .env  # edit and set SOVEREIGN_TRIGGER_TOKEN
+bash scripts/launch-os.sh
+bash scripts/post-install.sh
+```
+
+Quick start — desktop / dev:
 
 ```bash
 cd sovereign-intelligence-os
 python -m venv .venv
 source .venv/bin/activate
 pip install -e ".[dev]"
-cp .env.example .env
-bash install-termux-phase1.sh
-bash scripts/launch-os.sh
-bash scripts/post-install.sh
+cp .env.example .env  # edit and set SOVEREIGN_TRIGGER_TOKEN
+pytest -q
 ```
 
 Architecture: Kivy APK or Tasker sends HTTP requests into a local FastAPI orchestrator running in Termux/proot; the orchestrator routes prompts via LiteLLM, stores recall in ChromaDB, and exposes declarative MCP server inventory for GitHub, Google Drive, and filesystem integrations.
@@ -30,7 +38,7 @@ Environment highlights:
 - `SOVEREIGN_MEMORY_PATH` defaults to `~/.sovereign-os/memory`
 - `SOVEREIGN_IDENTITY_PATH` defaults to `~/.sovereign-os/identity.md`
 - `SOVEREIGN_TRIGGER_TOKEN` protects mutating endpoints
-- `MCP_SERVERS_CONFIG` points at `./configs/mcp_servers.json`
+- `SOVEREIGN_MCP_SERVERS_CONFIG` points at `./configs/mcp_servers.json`
 
 Component status:
 
@@ -43,7 +51,7 @@ Component status:
 | GitHub / Google Drive / filesystem MCP configs | Real | Declared in `configs/mcp_servers.json`; launcher scripts can start them externally. |
 | OpenClaw integration | Declarative only | Referenced operationally via external tooling; not imported into Python. |
 | OpenCV screen-awareness bridge | Real, optional | `orchestrator/cv_bridge.py` works when installed with `[cv]`. |
-| Browser bridge | Real, optional | `orchestrator/browser_bridge.js` requires system Chromium and `playwright-core`. |
+| Browser bridge | Real, optional | `orchestrator/browser_bridge.js` requires system Chromium and Node `playwright-core` (`npm i -g playwright-core`). |
 | Kivy APK client | Real | Thin HTTP client only; heavy inference dependencies stay in Termux. |
 | WebSocket streaming | Phase 2 — not yet implemented | HTTP request/response only today. |
 | Voice pipeline | Phase 2 — not yet implemented | Tasker and clipboard triggers only today. |

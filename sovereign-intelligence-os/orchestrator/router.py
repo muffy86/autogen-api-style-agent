@@ -9,8 +9,9 @@ log = logging.getLogger(__name__)
 
 
 class LLMRouter:
-    def __init__(self, default_model: str) -> None:
+    def __init__(self, default_model: str, timeout: float = 60.0) -> None:
         self.default_model = default_model
+        self.timeout = timeout
 
     async def complete(
         self,
@@ -29,6 +30,7 @@ class LLMRouter:
             response = await litellm.acompletion(
                 model=model or self.default_model,
                 messages=messages,
+                timeout=self.timeout,
             )
             content = response["choices"][0]["message"]["content"]
             return {"ok": True, "model": response.get("model"), "content": content}

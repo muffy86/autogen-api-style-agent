@@ -22,10 +22,19 @@ def test_trigger_requires_token(load_module):
     assert response.status_code == 401
 
 
+def test_memory_query_requires_token(load_module):
+    main = load_module("orchestrator.main")
+
+    with TestClient(main.app) as client:
+        response = client.get("/memory/query", params={"q": "hello", "n": 5})
+
+    assert response.status_code == 401
+
+
 def test_trigger_and_memory_query_end_to_end(load_module, monkeypatch):
     main = load_module("orchestrator.main")
 
-    async def fake_acompletion(*, model, messages):
+    async def fake_acompletion(*, model, messages, timeout):
         return {
             "model": model,
             "choices": [{"message": {"content": f"echo::{messages[-1]['content']}"}}],
@@ -39,7 +48,11 @@ def test_trigger_and_memory_query_end_to_end(load_module, monkeypatch):
             json={"query": "store this", "gesture": "tap", "context": "test"},
             headers={"x-sovereign-token": "test-token"},
         )
-        query = client.get("/memory/query", params={"q": "store this", "n": 5})
+        query = client.get(
+            "/memory/query",
+            params={"q": "store this", "n": 5},
+            headers={"x-sovereign-token": "test-token"},
+        )
 
     assert trigger.status_code == 200
     trigger_payload = trigger.json()

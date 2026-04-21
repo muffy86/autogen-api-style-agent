@@ -2,16 +2,20 @@
 
 Sovereign Intelligence OS keeps heavy orchestration inside Termux/proot and keeps the APK lightweight. The Android client layer only handles operator interaction and local HTTP dispatch.
 
+Today the orchestrator discovers MCP servers declaratively from `configs/mcp_servers.json`. Direct stdio MCP RPC from Python is a Phase 2 item.
+
 ```mermaid
 flowchart LR
   subgraph Fold7["Galaxy Fold 7 (Android)"]
     Kivy["Kivy APK (thin client)"]
     Tasker["Tasker + Termux:Tasker"]
     subgraph Termux["Termux + proot Ubuntu 24.04"]
+      Launcher["launch-os.sh"]
       Orch["FastAPI orchestrator"]
       LL["LiteLLM router"]
       CDB["ChromaDB persistent memory"]
       Ollama["Ollama (optional local)"]
+      MCPCfg["configs/mcp_servers.json"]
       MCP1["MCP server: github"]
       MCP2["MCP server: gdrive"]
       MCP3["MCP server: filesystem"]
@@ -24,9 +28,10 @@ flowchart LR
   LL --> Ollama
   LL --> Cloud
   Orch --> CDB
-  Orch -.->|stdio MCP| MCP1
-  Orch -.->|stdio MCP| MCP2
-  Orch -.->|stdio MCP| MCP3
+  Orch -.->|reads| MCPCfg
+  Launcher -->|spawns| MCP1
+  Launcher -->|spawns| MCP2
+  Launcher -->|spawns| MCP3
 ```
 
 Design notes:

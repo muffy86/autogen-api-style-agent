@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -14,6 +15,10 @@ class MCPServer:
     transport: str = "stdio"
 
 
+def _expand(value: str) -> str:
+    return os.path.expanduser(os.path.expandvars(value))
+
+
 def load_mcp_config(path: Path) -> list[MCPServer]:
     if not path.exists():
         return []
@@ -23,9 +28,9 @@ def load_mcp_config(path: Path) -> list[MCPServer]:
         servers.append(
             MCPServer(
                 name=name,
-                command=spec.get("command", ""),
-                args=list(spec.get("args", [])),
-                env=dict(spec.get("env", {})),
+                command=_expand(spec.get("command", "")),
+                args=[_expand(arg) for arg in spec.get("args", [])],
+                env={key: _expand(value) for key, value in spec.get("env", {}).items()},
                 transport=spec.get("transport", "stdio"),
             )
         )
