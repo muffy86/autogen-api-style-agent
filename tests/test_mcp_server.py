@@ -5,16 +5,20 @@ from mcp.server import Server
 from autogen_api_agent.mcp_server import _build_tools, create_mcp_server
 
 
-def test_build_tools_returns_five_tools_with_correct_names() -> None:
+def test_build_tools_returns_nine_tools_with_correct_names() -> None:
     tools = _build_tools()
 
-    assert len(tools) == 5
+    assert len(tools) == 9
     assert [tool.name for tool in tools] == [
         "agent_chat",
         "agent_code_review",
         "agent_research",
         "list_providers",
         "list_teams",
+        "browse",
+        "screenshot",
+        "read_file",
+        "list_directory",
     ]
 
 
@@ -32,3 +36,6 @@ def test_tool_schemas_have_required_fields() -> None:
     assert tools["agent_research"].inputSchema["required"] == ["topic"]
     assert tools["list_providers"].inputSchema["type"] == "object"
     assert tools["list_teams"].inputSchema["type"] == "object"
+    assert tools["browse"].inputSchema["required"] == ["url"]
+    assert tools["screenshot"].inputSchema["required"] == ["url"]
+    assert tools["read_file"].inputSchema["required"] == ["path"]

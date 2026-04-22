@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import base64
 import json
 
 from mcp.server import Server
@@ -15,6 +16,111 @@ from .config import get_config
 from .providers import ModelClientFactory
 from .teams import create_team
 from .utils import extract_final_response
+
+
+# Lazy-initialized Playwright browser for web browsing MCP tool
+_browser_instance = None
+
+
+async def _get_browser():
+    """Get or create a Playwright browser instance."""
+    global _browser_instance
+    if _browser_instance is None:
+        try:
+            from playwright.async_api import async_playwright
+            pw = await async_playwright().start()
+            _browser_instance = await pw.chromium.launch(headless=True)
+        except ImportError:
+            return None
+    return _browser_instance
+
+
+async def _handle_browse(url: str, wait_for: str | None = None) -> list[TextContent]:
+    """Browse a URL and return page content."""
+    try:
+        browser = await _get_browser()
+        if browser is None:
+            return [TextContent(type="text", text="Error: Playwright not available. Install with: pip install playwright")]
+
+        page = await browser.new_page()
+        try:
+            await page.goto(url, wait_until="domcontentloaded")
+            if wait_for:
+                await page.wait_for_selector(wait_for, timeout=5000)
+
+            content = await page.content()
+            # Truncate if too long
+            if len(content) > 40000:
+                content = content[:40000] + "\n\n... [truncated]"
+            return [TextContent(type="text", text=content)]
+        finally:
+            await page.close()
+    except Exception as e:
+        return [TextContent(type="text", text=f"Error browsing {url}: {e}")]
+
+
+async def _handle_screenshot(url: str, full_page: bool = False) -> list[TextContent]:
+    """Take a screenshot of a URL."""
+    try:
+        browser = await _get_browser()
+        if browser is None:
+            return [TextContent(type="text", text="Error: Playwright not available. Install with: pip install playwright")]
+
+        page = await browser.new_page(viewport={"width": 1280, "height": 720})
+        try:
+            await page.goto(url, wait_until="domcontentloaded")
+            await page.wait_for_timeout(500)  # Let content load
+
+            screenshot_bytes = await page.screenshot(full_page=full_page)
+            b64 = base64.b64encode(screenshot_bytes).decode("utf-8")
+            return [TextContent(type="text", text=f"data:image/png;base64,{b64}")]
+        finally:
+            await page.close()
+    except Exception as e:
+        return [TextContent(type="text", text=f"Error taking screenshot: {e}")]
+
+
+def _handle_read_file(file_path: str) -> list[TextContent]:
+    """Read file contents from local filesystem."""
+    try:
+        from pathlib import Path
+        p = Path(file_path).expanduser().resolve()
+        if not p.exists():
+            return [TextContent(type="text", text=f"Error: File not found: {file_path}")]
+        if not p.is_file():
+            return [TextContent(type="text", text=f"Error: Not a file: {file_path}")]
+
+        content = p.read_text(encoding="utf-8", errors="replace")
+        if len(content) > 50000:
+            content = content[:50000] + "\n\n... [truncated]"
+        return [TextContent(type="text", text=content)]
+    except Exception as e:
+        return [TextContent(type="text", text=f"Error reading file: {e}")]
+
+
+def _handle_list_directory(dir_path: str = ".") -> list[TextContent]:
+    """List directory contents."""
+    try:
+        from pathlib import Path
+        p = Path(dir_path).expanduser().resolve()
+        if not p.exists():
+            return [TextContent(type="text", text=f"Error: Directory not found: {dir_path}")]
+        if not p.is_dir():
+            return [TextContent(type="text", text=f"Error: Not a directory: {dir_path}")]
+
+        entries = sorted(p.iterdir(), key=lambda x: (not x.is_dir(), x.name.lower()))
+        lines = []
+        for entry in entries[:50]:
+            prefix = "📁 " if entry.is_dir() else "📄 "
+            name = entry.name
+            lines.append(f"{prefix}{name}")
+
+        result = "\n".join(lines)
+        if len(entries) > 50:
+            result += f"\n\n... and {len(entries) - 50} more"
+        return [TextContent(type="text", text=result)]
+    except Exception as e:
+        return [TextContent(type="text", text=f"Error listing directory: {e}")]
 
 
 def _build_tools() -> list[Tool]:
@@ -103,6 +209,56 @@ def _build_tools() -> list[Tool]:
             description="List available agent teams and their capabilities.",
             inputSchema={"type": "object", "properties": {}},
         ),
+        Tool(
+            name="browse",
+            description=(
+                "Navigate to a URL and return the page content. Uses headless browser for JS-heavy sites."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "url": {"type": "string", "description": "URL to navigate to"},
+                    "wait_for": {
+                        "type": "string",
+                        "description": "Optional CSS selector to wait for before returning",
+                    },
+                },
+                "required": ["url"],
+            },
+        ),
+        Tool(
+            name="screenshot",
+            description="Take a screenshot of a URL and return base64-encoded image.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "url": {"type": "string", "description": "URL to capture"},
+                    "full_page": {"type": "boolean", "default": False, "description": "Capture full page"},
+                },
+                "required": ["url"],
+            },
+        ),
+        Tool(
+            name="read_file",
+            description="Read the contents of a file from the local filesystem.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "path": {"type": "string", "description": "Path to the file to read"},
+                },
+                "required": ["path"],
+            },
+        ),
+        Tool(
+            name="list_directory",
+            description="List files and directories at the given path.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "path": {"type": "string", "default": ".", "description": "Directory path to list"},
+                },
+            },
+        ),
     ]
 
 
@@ -164,6 +320,24 @@ def create_mcp_server() -> Server:
                 "quick": "Single agent with all tools",
             }
             return [TextContent(type="text", text=json.dumps(teams_info, indent=2))]
+
+        if name == "browse":
+            url = arguments.get("url")
+            wait_for = arguments.get("wait_for")
+            return await _handle_browse(url, wait_for)
+
+        if name == "screenshot":
+            url = arguments.get("url")
+            full_page = arguments.get("full_page", False)
+            return await _handle_screenshot(url, full_page)
+
+        if name == "read_file":
+            file_path = arguments.get("path")
+            return _handle_read_file(file_path)
+
+        if name == "list_directory":
+            dir_path = arguments.get("path", ".")
+            return _handle_list_directory(dir_path)
 
         return [TextContent(type="text", text=f"Unknown tool: {name}")]
 

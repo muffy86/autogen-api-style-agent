@@ -308,6 +308,26 @@ When connected via MCP (IDE or `agent mcp-serve`), these tools are available:
 | `agent_chat` | `message`, `team?`, `provider?` | Chat with an agent team |
 | `agent_code_review` | `code`, `language?`, `focus?` | Review code with the review team |
 | `agent_research` | `topic`, `depth?` | Research a topic (quick / thorough) |
+| `browse` | `url`, `wait_for?` | Navigate to URL and extract content |
+| `screenshot` | `url`, `full_page?` | Capture screenshot as base64 PNG |
+| `read_file` | `path` | Read file contents from filesystem |
+| `list_directory` | `path?` | List files in directory |
+| `list_providers` | — | List available LLM providers |
+| `list_teams` | — | List available agent teams |
+
+### Web Browser Control
+
+The MCP server includes Playwright-based web browsing for JS-heavy pages:
+
+```bash
+# Requires Playwright
+pip install playwright
+playwright install chromium
+```
+
+### Filesystem Access
+
+The MCP server provides local filesystem access for reading files and listing directories. All paths are resolved relative to the user's home directory.
 
 ---
 
