@@ -12,11 +12,11 @@ from .models import (
     ChatCompletionResponse,
     ChatMessage,
 )
+from .openapi_spec import OPENAPI_SPEC
 from .providers.factory import ModelClientFactory
 from .server import app, create_app
 from .session import Session, SessionManager
 from .utils import extract_final_response, extract_message_text, format_task
-from .openapi_spec import OPENAPI_SPEC
 
 try:
     from .providers.swiss_public_ai import SwissAIClient, list_all_providers
