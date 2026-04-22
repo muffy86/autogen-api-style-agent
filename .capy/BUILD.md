@@ -1,9 +1,12 @@
-- Python 3.10+ with type hints everywhere
-- Use `autogen-agentchat==0.7.5` and `autogen-ext==0.7.5`
-- Follow existing patterns in `src/autogen_api_agent/`
-- Use pydantic-settings for config, async/await for all I/O
-- All tools are async functions with docstrings (AutoGen uses docstrings as tool descriptions)
-- Run `ruff check` and `ruff format` before committing
-- Tests go in `tests/` using pytest with async support via `pytest-asyncio`
+- Hybrid repo: SvelteKit 2 frontend (primary) + Python autogen backend
+- Frontend: Svelte 5, TypeScript, Tailwind CSS 4, AI SDK, Supabase, deployed on Vercel
+- Backend: Python 3.10+, AutoGen v0.7.5, FastAPI, Typer CLI
+- Package manager: pnpm (lockfile: pnpm-lock.yaml)
+- Frontend code: `src/routes/`, `src/lib/`, `src/hooks.server.ts`
+- Python code: `src/autogen_api_agent/`, `src/nanoclaw_bot/`
+- Tests: `tests/` using pytest with async support via pytest-asyncio
+- Linting: `ruff check src/ tests/` and `ruff format src/ tests/` for Python
+- SvelteKit check: `pnpm check` for frontend type checking
+- Use pydantic-settings for config, async/await for all Python I/O
+- All Python tools are async functions with docstrings (AutoGen uses docstrings as tool descriptions)
 - Provider clients must handle missing API keys gracefully with clear error messages
-- model_info dict is required for all OpenAI-compatible providers with custom base_url
