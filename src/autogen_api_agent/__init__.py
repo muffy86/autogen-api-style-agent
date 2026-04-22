@@ -2,6 +2,7 @@
 
 __version__ = "0.2.0"
 
+# Main entry point - imports for MCP server and CLI
 from .cli import app as cli_app
 from .config import AppConfig, ProviderConfig, get_config
 from .mcp_server import create_mcp_server, run_mcp_stdio
