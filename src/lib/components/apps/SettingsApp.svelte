@@ -1,9 +1,11 @@
 <script lang="ts">
-  import { Monitor, Palette, Shield, Info, Cpu, Key, Plug, Plus, Trash2, Wifi, WifiOff, ToggleLeft, ToggleRight } from 'lucide-svelte';
+  import { Monitor, Palette, Shield, Info, Cpu, Key, Plug, Plus, Trash2, Wifi, WifiOff, ToggleLeft, ToggleRight, Eye, EyeOff, RotateCcw, Check, Save } from 'lucide-svelte';
   import { themeStore } from '$lib/stores/theme.svelte';
   import { notificationStore } from '$lib/stores/notifications.svelte';
   import { mcpStore } from '$lib/stores/mcp.svelte';
   import { memoryStore } from '$lib/stores/memory.svelte';
+  import { settingsStore } from '$lib/stores/settings.svelte';
+  import { apiKeyStore } from '$lib/stores/apikeys.svelte';
 
   let selectedSection = $state('appearance');
 
@@ -24,6 +26,9 @@
   let mcpUrl = $state('');
   let mcpDesc = $state('');
   let mcpTesting = $state<string | null>(null);
+  let editingKey = $state<string | null>(null);
+  let keyInputValue = $state('');
+  let showKey = $state<Record<string, boolean>>({});
 
   function addMcpServer() {
     if (!mcpName.trim() || !mcpUrl.trim()) return;
@@ -37,6 +42,32 @@
     mcpTesting = id;
     await mcpStore.testConnection(id);
     mcpTesting = null;
+  }
+
+  function startEditKey(provider: string) {
+    editingKey = provider;
+    keyInputValue = apiKeyStore.getKey(provider);
+    showKey[provider] = false;
+  }
+
+  function saveKey(provider: string) {
+    if (!keyInputValue.trim()) {
+      cancelEditKey();
+      return;
+    }
+    apiKeyStore.setKey(provider, keyInputValue);
+    editingKey = null;
+    keyInputValue = '';
+    notificationStore.push({ type: 'success', title: 'API Key Saved', message: `${provider} key updated`, duration: 3000 });
+  }
+
+  function cancelEditKey() {
+    editingKey = null;
+    keyInputValue = '';
+  }
+
+  function toggleShowKey(provider: string) {
+    showKey[provider] = !showKey[provider];
   }
 
   const accentColors = [
@@ -253,16 +284,193 @@
           <p class="about-desc">A next-generation AI-powered operating system interface. Built with SvelteKit, designed for the future.</p>
         </div>
       </div>
+    {:else if selectedSection === 'general'}
+      <div class="section">
+        <h3 class="section-title">General</h3>
+        <p class="section-desc">Configure default behavior and preferences</p>
+
+        <div class="setting-group">
+          <span class="setting-label">Default Team</span>
+          <p class="setting-hint">The agent team used for new conversations.</p>
+          <div class="theme-options">
+            {#each ['productivity', 'code_review', 'research', 'quick'] as team}
+              <button
+                class="theme-btn"
+                class:active={settingsStore.settings.defaultTeam === team}
+                onclick={() => settingsStore.update('defaultTeam', team)}
+              >
+                {team.replace('_', ' ')}
+              </button>
+            {/each}
+          </div>
+        </div>
+
+        <div class="setting-group">
+          <span class="setting-label">Default Provider</span>
+          <p class="setting-hint">Preferred LLM provider. "auto" selects the best available.</p>
+          <div class="select-wrapper">
+            <select
+              class="settings-select"
+              value={settingsStore.settings.defaultProvider}
+              onchange={(e) => settingsStore.update('defaultProvider', e.currentTarget.value)}
+            >
+              <option value="auto">Auto (recommended)</option>
+              <option value="openai">OpenAI</option>
+              <option value="anthropic">Anthropic</option>
+              <option value="google">Google Gemini</option>
+              <option value="together">Together.ai</option>
+              <option value="openrouter">OpenRouter</option>
+              <option value="mistral">Mistral</option>
+              <option value="moonshot">Kimi (Moonshot)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="setting-group">
+          <span class="setting-label">Streaming</span>
+          <p class="setting-hint">Stream agent responses token-by-token.</p>
+          <button class="toggle-btn" class:active={settingsStore.settings.streamResponses} onclick={() => settingsStore.update('streamResponses', !settingsStore.settings.streamResponses)}>
+            {#if settingsStore.settings.streamResponses}
+              <ToggleRight size={18} />
+              <span>Streaming Enabled</span>
+            {:else}
+              <ToggleLeft size={18} />
+              <span>Streaming Disabled</span>
+            {/if}
+          </button>
+        </div>
+
+        <div class="setting-group">
+          <span class="setting-label">Notifications</span>
+          <button class="toggle-btn" class:active={settingsStore.settings.showNotifications} onclick={() => settingsStore.update('showNotifications', !settingsStore.settings.showNotifications)}>
+            {#if settingsStore.settings.showNotifications}
+              <ToggleRight size={18} />
+              <span>Notifications Enabled</span>
+            {:else}
+              <ToggleLeft size={18} />
+              <span>Notifications Disabled</span>
+            {/if}
+          </button>
+        </div>
+
+        <div class="setting-group">
+          <span class="setting-label">Session Timeout</span>
+          <p class="setting-hint">Minutes before an idle session expires.</p>
+          <div class="select-wrapper">
+            <select
+              class="settings-select"
+              value={settingsStore.settings.sessionTimeoutMinutes}
+              onchange={(e) => settingsStore.update('sessionTimeoutMinutes', Number(e.currentTarget.value))}
+            >
+              <option value={15}>15 minutes</option>
+              <option value={30}>30 minutes</option>
+              <option value={60}>1 hour</option>
+              <option value={120}>2 hours</option>
+              <option value={480}>8 hours</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="setting-group">
+          <button class="clear-memory-btn" onclick={() => { settingsStore.reset(); notificationStore.push({ type: 'success', title: 'Settings Reset', message: 'All general settings restored to defaults', duration: 3000 }); }}>
+            <RotateCcw size={13} />
+            Reset to Defaults
+          </button>
+        </div>
+      </div>
+    {:else if selectedSection === 'models'}
+      <div class="section">
+        <h3 class="section-title">AI Models</h3>
+        <p class="section-desc">Available LLM providers and their default models</p>
+
+        <div class="model-grid">
+          {#each apiKeyStore.providers as prov}
+            <div class="model-card" class:configured={apiKeyStore.isConfigured(prov.provider)}>
+              <div class="model-card-header">
+                <span class="model-card-name">{prov.label}</span>
+                <span class="status-badge" class:connected={apiKeyStore.isConfigured(prov.provider)} class:unknown={!apiKeyStore.isConfigured(prov.provider)}>
+                  {apiKeyStore.isConfigured(prov.provider) ? 'Ready' : 'No Key'}
+                </span>
+              </div>
+              <span class="model-card-model">{prov.model}</span>
+              <span class="model-card-id">{prov.provider}</span>
+            </div>
+          {/each}
+        </div>
+
+        <div class="setting-group" style="margin-top: 24px;">
+          <p class="setting-hint">
+            {apiKeyStore.configuredCount} of {apiKeyStore.providers.length} providers configured. Add API keys in the API Keys section.
+          </p>
+        </div>
+      </div>
+    {:else if selectedSection === 'apikeys'}
+      <div class="section">
+        <h3 class="section-title">API Keys</h3>
+        <p class="section-desc">Manage your LLM provider API keys. Keys are stored locally in your browser.</p>
+
+        <div class="apikey-list">
+          {#each apiKeyStore.providers as prov}
+            <div class="apikey-row">
+              <div class="apikey-info">
+                <span class="apikey-label">{prov.label}</span>
+                <span class="apikey-model">{prov.model}</span>
+              </div>
+              {#if editingKey === prov.provider}
+                <div class="apikey-edit">
+                  <input
+                    class="mcp-input apikey-input"
+                    type={showKey[prov.provider] ? 'text' : 'password'}
+                    placeholder="sk-..."
+                    bind:value={keyInputValue}
+                    onkeydown={(e) => { if (e.key === 'Enter') saveKey(prov.provider); if (e.key === 'Escape') cancelEditKey(); }}
+                  />
+                  <button class="mcp-action-btn" onclick={() => toggleShowKey(prov.provider)}>
+                    {#if showKey[prov.provider]}
+                      <EyeOff size={13} />
+                    {:else}
+                      <Eye size={13} />
+                    {/if}
+                  </button>
+                  <button class="mcp-action-btn" onclick={() => saveKey(prov.provider)}>
+                    <Save size={13} />
+                    Save
+                  </button>
+                  <button class="mcp-action-btn" onclick={cancelEditKey}>
+                    Cancel
+                  </button>
+                </div>
+              {:else}
+                <div class="apikey-display">
+                  {#if apiKeyStore.isConfigured(prov.provider)}
+                    <span class="apikey-masked">{apiKeyStore.maskKey(apiKeyStore.getKey(prov.provider))}</span>
+                    <span class="status-badge connected"><Check size={10} /> Set</span>
+                  {:else}
+                    <span class="apikey-masked not-set">Not configured</span>
+                  {/if}
+                  <button class="mcp-action-btn" onclick={() => startEditKey(prov.provider)}>
+                    <Key size={13} />
+                    {apiKeyStore.isConfigured(prov.provider) ? 'Change' : 'Add Key'}
+                  </button>
+                  {#if apiKeyStore.isConfigured(prov.provider)}
+                    <button class="mcp-action-btn danger" onclick={() => { apiKeyStore.setKey(prov.provider, ''); notificationStore.push({ type: 'success', title: 'Key Removed', message: `${prov.label} key removed`, duration: 3000 }); }}>
+                      <Trash2 size={13} />
+                    </button>
+                  {/if}
+                </div>
+              {/if}
+            </div>
+          {/each}
+        </div>
+
+        <div class="setting-group" style="margin-top: 20px;">
+          <p class="setting-hint">Keys are stored in your browser's localStorage and never sent to our servers. For server-side keys, configure them in the <code>.env</code> file.</p>
+        </div>
+      </div>
     {:else}
       <div class="section">
         <h3 class="section-title">{sections.find((s) => s.id === selectedSection)?.name}</h3>
         <p class="section-desc">This section is coming soon.</p>
-        <div class="placeholder-content">
-          <div class="placeholder-row"></div>
-          <div class="placeholder-row short"></div>
-          <div class="placeholder-row"></div>
-          <div class="placeholder-row shorter"></div>
-        </div>
       </div>
     {/if}
   </div>
@@ -473,28 +681,6 @@
     max-width: 400px;
     margin: 0 auto;
     line-height: 1.6;
-  }
-
-  .placeholder-content {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    margin-top: 16px;
-  }
-
-  .placeholder-row {
-    height: 12px;
-    background: var(--bg-surface);
-    border-radius: 6px;
-    width: 100%;
-  }
-
-  .placeholder-row.short {
-    width: 75%;
-  }
-
-  .placeholder-row.shorter {
-    width: 50%;
   }
 
   .mcp-form {
@@ -750,6 +936,9 @@
   }
 
   .clear-memory-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
     padding: 6px 14px;
     border-radius: var(--radius-sm);
     border: 1px solid rgba(244, 63, 94, 0.3);
@@ -762,5 +951,160 @@
 
   .clear-memory-btn:hover {
     background: rgba(244, 63, 94, 0.1);
+  }
+
+  .select-wrapper {
+    display: inline-block;
+  }
+
+  .settings-select {
+    padding: 8px 32px 8px 12px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-subtle);
+    background: var(--bg-surface);
+    color: var(--text-primary);
+    font-size: 13px;
+    font-family: inherit;
+    outline: none;
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2371717a' d='M3 4.5L6 7.5L9 4.5'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    transition: border-color var(--transition-fast);
+  }
+
+  .settings-select:focus {
+    border-color: var(--accent);
+  }
+
+  .settings-select option {
+    background: var(--bg-base);
+    color: var(--text-primary);
+  }
+
+  .model-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 10px;
+  }
+
+  .model-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm);
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    transition: all var(--transition-fast);
+  }
+
+  .model-card.configured {
+    border-color: rgba(16, 185, 129, 0.2);
+  }
+
+  .model-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .model-card-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  .model-card-model {
+    font-size: 12px;
+    color: var(--text-secondary);
+    font-family: 'JetBrains Mono', 'SF Mono', monospace;
+  }
+
+  .model-card-id {
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+
+  .apikey-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .apikey-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 14px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm);
+    flex-wrap: wrap;
+  }
+
+  .apikey-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 140px;
+  }
+
+  .apikey-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  .apikey-model {
+    font-size: 11px;
+    color: var(--text-muted);
+    font-family: 'JetBrains Mono', 'SF Mono', monospace;
+  }
+
+  .apikey-display {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .apikey-edit {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .apikey-input {
+    flex: 1;
+    min-width: 180px;
+    font-family: 'JetBrains Mono', 'SF Mono', monospace;
+    font-size: 12px;
+  }
+
+  .apikey-masked {
+    font-size: 12px;
+    font-family: 'JetBrains Mono', 'SF Mono', monospace;
+    color: var(--text-secondary);
+    letter-spacing: 0.5px;
+  }
+
+  .apikey-masked.not-set {
+    color: var(--text-muted);
+    font-family: inherit;
+    font-style: italic;
+    letter-spacing: normal;
+  }
+
+  code {
+    font-family: 'JetBrains Mono', 'SF Mono', monospace;
+    font-size: 12px;
+    padding: 1px 5px;
+    background: var(--bg-surface);
+    border-radius: 4px;
+    color: var(--accent-glow);
   }
 </style>
