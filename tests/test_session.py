@@ -1,15 +1,17 @@
 from __future__ import annotations
 
-from datetime import datetime, timedelta, UTC
+from datetime import datetime, timedelta, timezone
 
 import pytest
 
 import autogen_api_agent.session as session_module
 from autogen_api_agent.session import Session, SessionManager
 
+utc = timezone.utc
+
 
 class FrozenDateTime(datetime):
-    current = datetime(2024, 1, 1, 12, 0, 0, tzinfo=UTC)
+    current = datetime(2024, 1, 1, 12, 0, 0, tzinfo=utc)
 
     @classmethod
     def now(cls, tz=None) -> datetime:
@@ -87,7 +89,7 @@ async def test_session_manager_get_or_create_returns_existing_session() -> None:
 async def test_session_manager_get_or_create_replaces_expired_session() -> None:
     manager = SessionManager(ttl_minutes=60)
     expired = await manager.get_or_create("session-1")
-    expired.last_active = datetime.now(UTC) - timedelta(minutes=61)
+    expired.last_active = datetime.now(utc) - timedelta(minutes=61)
 
     replacement = await manager.get_or_create("session-1")
 
@@ -118,7 +120,7 @@ async def test_session_manager_cleanup_expired_removes_only_expired_sessions() -
     manager = SessionManager(ttl_minutes=60)
     expired = await manager.get_or_create("expired")
     fresh = await manager.get_or_create("fresh")
-    expired.last_active = datetime.now(UTC) - timedelta(minutes=61)
+    expired.last_active = datetime.now(utc) - timedelta(minutes=61)
 
     removed = await manager.cleanup_expired()
 
@@ -132,7 +134,7 @@ async def test_session_manager_list_sessions_excludes_expired() -> None:
     manager = SessionManager(ttl_minutes=60)
     expired = await manager.get_or_create("expired")
     await manager.get_or_create("fresh")
-    expired.last_active = datetime.now(UTC) - timedelta(minutes=61)
+    expired.last_active = datetime.now(utc) - timedelta(minutes=61)
 
     sessions = await manager.list_sessions()
 

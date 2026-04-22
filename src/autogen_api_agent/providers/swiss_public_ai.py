@@ -173,14 +173,18 @@ def list_all_providers() -> list[dict[str, Any]]:
 
 def list_institutions() -> list[dict[str, Any]]:
     """List Swiss AI research institutions."""
-    return [{"id": k, "name": v["name"], "url": v["url"], "focus": v["focus"]}
-            for k, v in INSTITUTIONS.items()]
+    return [
+        {"id": k, "name": v["name"], "url": v["url"], "focus": v["focus"]}
+        for k, v in INSTITUTIONS.items()
+    ]
 
 
 def list_grants() -> list[dict[str, Any]]:
     """List Swiss AI funding opportunities."""
-    return [{"id": k, "name": v["name"], "url": v["url"], "description": v["description"]}
-            for k, v in GRANTS.items()]
+    return [
+        {"id": k, "name": v["name"], "url": v["url"], "description": v["description"]}
+        for k, v in GRANTS.items()
+    ]
 
 
 def get_swiss_stats() -> dict[str, Any]:
