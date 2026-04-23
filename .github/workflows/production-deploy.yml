@@ -1,0 +1,137 @@
+name: Production Deploy
+
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  deploy:
+    name: Deploy to production with verification gate
+    runs-on: ubuntu-latest
+    env:
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Vercel CLI
+        run: npm install --global vercel@latest
+
+      - name: Capture rollback target (currently promoted deployment)
+        id: rollback_target
+        run: |
+          set -euo pipefail
+          query="projectId=${VERCEL_PROJECT_ID}&target=production&state=READY&limit=1"
+          if [ -n "${VERCEL_ORG_ID:-}" ]; then
+            query="${query}&teamId=${VERCEL_ORG_ID}"
+          fi
+          # Capture body + status code separately so we can fail loudly on API errors.
+          http_status=$(curl -sS -o /tmp/vercel_ls.json -w '%{http_code}' \
+            -H "Authorization: Bearer ${VERCEL_TOKEN}" \
+            "https://api.vercel.com/v6/deployments?${query}")
+          if [ "$http_status" != "200" ]; then
+            echo "::error::Vercel API returned HTTP ${http_status} while fetching rollback target"
+            echo "Response body:" >&2
+            cat /tmp/vercel_ls.json >&2 || true
+            exit 1
+          fi
+          if ! jq -e . /tmp/vercel_ls.json >/dev/null 2>&1; then
+            echo "::error::Vercel API returned non-JSON body for rollback target query"
+            cat /tmp/vercel_ls.json >&2 || true
+            exit 1
+          fi
+          count=$(jq -r '.deployments | length' /tmp/vercel_ls.json)
+          if [ "$count" = "0" ]; then
+            # Zero READY production deployments = genuinely first-ever deploy. Allow.
+            echo "id=" >> "$GITHUB_OUTPUT"
+            echo "url=" >> "$GITHUB_OUTPUT"
+            echo "Rollback target: <none — first production deploy>"
+          else
+            prev_id=$(jq -r '.deployments[0].uid' /tmp/vercel_ls.json)
+            prev_host=$(jq -r '.deployments[0].url' /tmp/vercel_ls.json)
+            prev_url="https://${prev_host}"
+            echo "id=${prev_id}" >> "$GITHUB_OUTPUT"
+            echo "url=${prev_url}" >> "$GITHUB_OUTPUT"
+            echo "Rollback target: ${prev_url} (${prev_id})"
+          fi
+
+      - name: Pull Vercel production env
+        run: vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
+
+      - name: Build (Vercel production)
+        run: vercel build --prod --token="$VERCEL_TOKEN"
+
+      - name: Deploy to production
+        id: deploy
+        run: |
+          set -euo pipefail
+          url=$(vercel deploy --prebuilt --prod --token="$VERCEL_TOKEN")
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+          echo "Deployed: $url"
+          echo "Timestamp: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
+      - name: Wait 30s for edge propagation
+        run: sleep 30
+
+      - name: Post-deploy verification
+        id: verify
+        run: ./scripts/post-deploy-verify.sh "${{ steps.deploy.outputs.url }}"
+
+      - name: Rollback on verification failure
+        if: failure() && steps.verify.outcome == 'failure'
+        env:
+          PREV_DEPLOYMENT_ID: ${{ steps.rollback_target.outputs.id }}
+          PREV_DEPLOYMENT_URL: ${{ steps.rollback_target.outputs.url }}
+          FAILED_DEPLOYMENT_URL: ${{ steps.deploy.outputs.url }}
+          COMMIT_SHA: ${{ github.sha }}
+        run: |
+          target="${PREV_DEPLOYMENT_ID:-${PREV_DEPLOYMENT_URL:-}}"
+          if [ -z "$target" ]; then
+            echo "::error::No previous READY deployment captured — cannot auto-rollback. Manual intervention required."
+            exit 1
+          fi
+          ./scripts/rollback.sh "$target"
+
+      - name: File incident issue on failure
+        if: failure()
+        env:
+          FAILED_URL: ${{ steps.deploy.outputs.url }}
+          PREV_URL: ${{ steps.rollback_target.outputs.url }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          title="Production deploy failed: ${GITHUB_SHA:0:7}"
+          body=$(cat <<EOF
+          **Commit:** \`$GITHUB_SHA\`
+          **Failed deployment:** ${FAILED_URL:-<deploy step did not produce a URL>}
+          **Rollback target:** ${PREV_URL:-<none captured>}
+          **Workflow run:** $RUN_URL
+
+          The post-deploy verification gate failed. Automated rollback was attempted — see workflow logs for outcome.
+
+          ### Required actions
+          - [ ] Confirm production is serving the previous deployment
+          - [ ] Triage root cause from workflow logs
+          - [ ] Open a recovery PR with a fix or revert
+          - [ ] Close this issue once production is healthy
+          EOF
+          )
+          gh issue create \
+            --title "$title" \
+            --body "$body" \
+            --label "incident,deploy-failure" \
+            --repo "$GITHUB_REPOSITORY"
