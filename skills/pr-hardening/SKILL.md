@@ -9,7 +9,7 @@ Take a draft PR from "works on my machine" to merge-ready: add tests, fix lint, 
 Before requesting review on a non-trivial change, or after a review leaves actionable comments.
 
 ## Required MCP servers
-github, filesystem, playwright
+github, filesystem, playwright, memory
 
 ## Procedure
 1. TODO — document step-by-step actions

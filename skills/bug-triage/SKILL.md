@@ -9,7 +9,7 @@ Classify an incoming issue or failing report, reproduce it if possible, assign s
 A GitHub issue is filed, CI reports a regression, or a user reports unexpected behaviour.
 
 ## Required MCP servers
-github, filesystem, fetch, notion
+github, filesystem, fetch, notion, memory
 
 ## Procedure
 1. TODO — document step-by-step actions

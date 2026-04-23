@@ -9,7 +9,7 @@ Cut a release: tag the commit, publish GitHub release notes, trigger production 
 When a milestone PR is merged to main and the change should go live.
 
 ## Required MCP servers
-github, vercel, railway, notion
+github, filesystem, vercel, railway, notion, memory
 
 ## Procedure
 1. TODO — document step-by-step actions

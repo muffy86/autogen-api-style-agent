@@ -1,5 +1,4 @@
 {
-  "$schema": "https://modelcontextprotocol.io/schemas/mcp.config.schema.json",
   "name": "autogen-api-style-agent",
   "description": "Full MCP connectivity layer for the autonomous agent factory — 8 servers across core, deployment, and knowledge tiers.",
   "version": "1.0.0",
@@ -36,12 +35,9 @@
       "tier": "deployment",
       "type": "http",
       "url": "https://mcp.vercel.com",
-      "env": {
-        "VERCEL_TOKEN": "${VERCEL_TOKEN}",
-        "VERCEL_TEAM_ID": "${VERCEL_TEAM_ID}",
-        "VERCEL_PROJECT_ID": "${VERCEL_PROJECT_ID}"
-      },
-      "description": "Vercel deployments — trigger builds, read preview URLs, manage env vars, monitor deploy status."
+      "auth": "oauth",
+      "env": {},
+      "description": "Vercel deployments — trigger builds, read preview URLs, manage env vars, monitor deploy status. Authentication is OAuth — on first use the MCP client prompts the user to authorize via Vercel's web flow; no static tokens are required."
     },
     "railway": {
       "tier": "deployment",
@@ -74,9 +70,9 @@
       "command": "npx",
       "args": ["-y", "@modelcontextprotocol/server-memory"],
       "env": {
-        "MEMORY_FILE_PATH": "${workspaceFolder}/.capy/memory/knowledge-graph.json"
+        "MEMORY_FILE_PATH": "${MEMORY_FILE_PATH:-${workspaceFolder}/.capy/memory/knowledge-graph.json}"
       },
-      "description": "Persistent knowledge graph — agent context, decisions, and outputs across sessions."
+      "description": "Persistent knowledge graph — agent context, decisions, and outputs across sessions. Override storage location with MEMORY_FILE_PATH in .env; defaults to the workspace path shown."
     }
   }
 }

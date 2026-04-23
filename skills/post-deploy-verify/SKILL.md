@@ -9,7 +9,7 @@ After a deploy, confirm the new version is healthy: hit health endpoints, run sm
 Immediately after any production deploy (automatic or manual).
 
 ## Required MCP servers
-vercel, railway, playwright, fetch, memory
+vercel, railway, playwright, fetch, memory, filesystem, github
 
 ## Procedure
 1. TODO — document step-by-step actions

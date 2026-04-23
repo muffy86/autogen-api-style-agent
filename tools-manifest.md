@@ -24,7 +24,7 @@ All env vars live in @configs/.env.example. Real secrets go into `.env` (gitigno
 - **Transport**: stdio via `npx`
 - **Env vars**: `GITHUB_PERSONAL_ACCESS_TOKEN` (scopes: `repo`, `workflow`, `read:org`, `read:packages`)
 - **Verify**: list open PRs and issues on `muffy86/autogen-api-style-agent`.
-- **Used by**: repo-bootstrap, bug-triage, ci-repair, pr-hardening, release-ship skills.
+- **Used by**: repo-bootstrap, bug-triage, ci-repair, pr-hardening, release-ship, post-deploy-verify.
 
 ### 2. Playwright MCP
 - **Purpose**: Browser automation and UI verification — navigate pages, click, type, take screenshots, evaluate JS.
@@ -32,7 +32,7 @@ All env vars live in @configs/.env.example. Real secrets go into `.env` (gitigno
 - **Transport**: stdio via `npx`
 - **Env vars**: none (browsers installed on first use via `npx playwright install`)
 - **Verify**: open `https://github.com/muffy86/autogen-api-style-agent` and return the page title.
-- **Used by**: post-deploy-verify, pr-hardening skills.
+- **Used by**: pr-hardening, post-deploy-verify.
 
 ### 3. Filesystem MCP
 - **Purpose**: Workspace file I/O — read, write, list, move, search within the project root. Scoped to `${workspaceFolder}` — cannot escape.
@@ -41,7 +41,6 @@ All env vars live in @configs/.env.example. Real secrets go into `.env` (gitigno
 - **Env vars**: none (path passed as arg)
 - **Verify**: list contents of `src/`.
 - **Used by**: every skill.
-
 ---
 
 ## Tier 2 — Deployment
@@ -50,9 +49,10 @@ All env vars live in @configs/.env.example. Real secrets go into `.env` (gitigno
 - **Purpose**: Vercel deployments — trigger builds, read preview URLs, manage environment variables, monitor deploy status, inspect logs.
 - **Endpoint**: `https://mcp.vercel.com` (remote HTTP MCP)
 - **Transport**: HTTP
-- **Env vars**: `VERCEL_TOKEN`, `VERCEL_TEAM_ID`, `VERCEL_PROJECT_ID`
+- **Auth**: OAuth (browser flow on first connection — no static tokens)
+- **Env vars**: none (MCP server ignores any `VERCEL_*` env vars)
 - **Verify**: list deployments for the project.
-- **Used by**: release-ship, post-deploy-verify skills.
+- **Used by**: release-ship, post-deploy-verify.
 
 ### 5. Railway MCP
 - **Purpose**: Railway services — deploy hooks, log streaming, env vars, service lifecycle, database provisioning.
@@ -60,7 +60,7 @@ All env vars live in @configs/.env.example. Real secrets go into `.env` (gitigno
 - **Transport**: stdio via `npx`
 - **Env vars**: `RAILWAY_API_TOKEN`
 - **Verify**: list connected services.
-- **Used by**: release-ship, post-deploy-verify skills.
+- **Used by**: release-ship, post-deploy-verify.
 
 ---
 
@@ -72,7 +72,7 @@ All env vars live in @configs/.env.example. Real secrets go into `.env` (gitigno
 - **Transport**: stdio via `npx`
 - **Env vars**: `NOTION_API_KEY` (injected into `OPENAPI_MCP_HEADERS` as Bearer token)
 - **Verify**: search for a page titled "Runbook".
-- **Used by**: repo-bootstrap, release-ship, bug-triage skills.
+- **Used by**: bug-triage, release-ship.
 
 ### 7. Fetch MCP
 - **Purpose**: Generic HTTP — hit API endpoints, webhook testing, health checks, page content extraction.
@@ -80,7 +80,7 @@ All env vars live in @configs/.env.example. Real secrets go into `.env` (gitigno
 - **Transport**: stdio via `uvx`
 - **Env vars**: none
 - **Verify**: fetch `https://api.github.com/zen`.
-- **Used by**: ci-repair, post-deploy-verify skills.
+- **Used by**: repo-bootstrap, bug-triage, ci-repair, post-deploy-verify.
 
 ### 8. Memory MCP
 - **Purpose**: Persistent knowledge graph — stores agent context, decisions, and outputs across sessions. Survives restarts.

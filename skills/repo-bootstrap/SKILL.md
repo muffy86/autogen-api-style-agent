@@ -9,7 +9,7 @@ Stand up a fresh clone of this repository so an agent can do useful work: instal
 First run in a new VM, after `.env` changes, or when a dependency lockfile was updated.
 
 ## Required MCP servers
-filesystem, github, fetch
+filesystem, github, fetch, memory
 
 ## Procedure
 1. TODO — document step-by-step actions

@@ -9,7 +9,7 @@ Diagnose and fix a red CI run — read workflow logs, isolate the failing step, 
 A GitHub Actions check fails on main or on an open PR.
 
 ## Required MCP servers
-github, filesystem, fetch
+github, filesystem, fetch, memory
 
 ## Procedure
 1. TODO — document step-by-step actions
