@@ -1,0 +1,29 @@
+name: auto-merge
+
+on:
+  pull_request:
+    types: [labeled, unlabeled, synchronize, opened, reopened, ready_for_review]
+  check_suite:
+    types: [completed]
+  status: {}
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  automerge:
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+    steps:
+      - name: Check label
+        id: label
+        run: |
+          LABELS='${{ toJson(github.event.pull_request.labels) }}'
+          echo "has_label=$(echo "$LABELS" | grep -q '"name":"automerge"' && echo true || echo false)" >> $GITHUB_OUTPUT
+      - name: Enable auto-merge
+        if: steps.label.outputs.has_label == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr merge --squash --auto --delete-branch ${{ github.event.pull_request.number }} --repo ${{ github.repository }}

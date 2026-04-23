@@ -1,0 +1,57 @@
+name: event-bus-ci
+
+on:
+  pull_request:
+    paths:
+      - 'src/event-bus/**'
+      - 'src/agents/**'
+      - 'src/composio/**'
+      - 'src/telegram/**'
+      - 'tsconfig.node.json'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - '.github/workflows/event-bus-ci.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'src/event-bus/**'
+      - 'src/agents/**'
+      - 'src/composio/**'
+      - 'src/telegram/**'
+      - 'tsconfig.node.json'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+
+jobs:
+  node-ci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+      - name: Install
+        run: pnpm install --frozen-lockfile
+      - name: Typecheck Node subsystem
+        run: pnpm typecheck:node
+        continue-on-error: false
+      - name: Smoke boot event-bus
+        env:
+          PORT: 8787
+          DATABASE_URL: file:./data/ci.db
+          NODE_ENV: test
+        run: |
+          mkdir -p data
+          pnpm event-bus &
+          BUS_PID=$!
+          sleep 3
+          curl -fsS http://localhost:8787/health | tee /tmp/health.json
+          curl -fsS -X POST http://localhost:8787/events \
+            -H 'content-type: application/json' \
+            -d '{"source":"ci","type":"make_callback","payload":{"task_id":"ci-smoke"}}' | tee /tmp/event.json
+          kill $BUS_PID
