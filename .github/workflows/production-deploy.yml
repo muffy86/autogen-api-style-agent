@@ -35,24 +35,39 @@ jobs:
         id: rollback_target
         run: |
           set -euo pipefail
-          # Query the Vercel API directly for the newest READY production deployment.
-          # This is the one currently serving traffic before this workflow deploys.
           query="projectId=${VERCEL_PROJECT_ID}&target=production&state=READY&limit=1"
           if [ -n "${VERCEL_ORG_ID:-}" ]; then
             query="${query}&teamId=${VERCEL_ORG_ID}"
           fi
-          response=$(curl -sS -H "Authorization: Bearer ${VERCEL_TOKEN}" \
+          # Capture body + status code separately so we can fail loudly on API errors.
+          http_status=$(curl -sS -o /tmp/vercel_ls.json -w '%{http_code}' \
+            -H "Authorization: Bearer ${VERCEL_TOKEN}" \
             "https://api.vercel.com/v6/deployments?${query}")
-          prev_id=$(echo "$response" | jq -r '.deployments[0].uid // empty')
-          prev_host=$(echo "$response" | jq -r '.deployments[0].url // empty')
-          if [ -n "$prev_host" ]; then
-            prev_url="https://${prev_host}"
-          else
-            prev_url=""
+          if [ "$http_status" != "200" ]; then
+            echo "::error::Vercel API returned HTTP ${http_status} while fetching rollback target"
+            echo "Response body:" >&2
+            cat /tmp/vercel_ls.json >&2 || true
+            exit 1
           fi
-          echo "id=${prev_id}" >> "$GITHUB_OUTPUT"
-          echo "url=${prev_url}" >> "$GITHUB_OUTPUT"
-          echo "Rollback target: ${prev_url:-<none — first deploy>} (${prev_id:-n/a})"
+          if ! jq -e . /tmp/vercel_ls.json >/dev/null 2>&1; then
+            echo "::error::Vercel API returned non-JSON body for rollback target query"
+            cat /tmp/vercel_ls.json >&2 || true
+            exit 1
+          fi
+          count=$(jq -r '.deployments | length' /tmp/vercel_ls.json)
+          if [ "$count" = "0" ]; then
+            # Zero READY production deployments = genuinely first-ever deploy. Allow.
+            echo "id=" >> "$GITHUB_OUTPUT"
+            echo "url=" >> "$GITHUB_OUTPUT"
+            echo "Rollback target: <none — first production deploy>"
+          else
+            prev_id=$(jq -r '.deployments[0].uid' /tmp/vercel_ls.json)
+            prev_host=$(jq -r '.deployments[0].url' /tmp/vercel_ls.json)
+            prev_url="https://${prev_host}"
+            echo "id=${prev_id}" >> "$GITHUB_OUTPUT"
+            echo "url=${prev_url}" >> "$GITHUB_OUTPUT"
+            echo "Rollback target: ${prev_url} (${prev_id})"
+          fi
 
       - name: Pull Vercel production env
         run: vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
