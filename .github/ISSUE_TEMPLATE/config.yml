@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Documentation
+    url: https://github.com/muffy86/autogen-api-style-agent/blob/main/README.md
+    about: Usage, configuration, and architecture docs
+  - name: Discussions
+    url: https://github.com/muffy86/autogen-api-style-agent/discussions
+    about: Questions, ideas, and general discussion

@@ -1,0 +1,10 @@
+node_modules
+.svelte-kit
+build
+dist
+.vercel
+package-lock.json
+pnpm-lock.yaml
+src/autogen_api_agent
+src/nanoclaw_bot
+tests

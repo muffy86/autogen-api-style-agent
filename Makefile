@@ -1,4 +1,4 @@
-.PHONY: install dev serve mcp cli test lint format docker-build docker-run docker-up docker-down bootstrap setup-trae clean
+.PHONY: install dev serve mcp cli test lint format docker-build docker-run docker-up docker-down bootstrap setup-trae clean typecheck lint-all test-all smoke post-deploy-verify
 
 install:
 	pip install -e .
@@ -24,6 +24,25 @@ lint:
 
 format:
 	ruff format src/ tests/
+
+typecheck:
+	mypy src/autogen_api_agent --ignore-missing-imports || true
+	pnpm run typecheck
+
+lint-all:
+	ruff check src/ tests/
+	ruff format --check src/ tests/
+	pnpm run lint
+
+test-all:
+	pytest -v
+	pnpm run test
+
+smoke:
+	bash scripts/smoke-test.sh
+
+post-deploy-verify:
+	bash scripts/post-deploy-verify.sh
 
 docker-build:
 	docker build -t autogen-agent .
