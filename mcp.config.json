@@ -1,0 +1,82 @@
+{
+  "$schema": "https://modelcontextprotocol.io/schemas/mcp.config.schema.json",
+  "name": "autogen-api-style-agent",
+  "description": "Full MCP connectivity layer for the autonomous agent factory — 8 servers across core, deployment, and knowledge tiers.",
+  "version": "1.0.0",
+  "tiers": {
+    "core": "Install immediately — required for baseline agent operation.",
+    "deployment": "Install after core — enables CI/CD and hosted service control.",
+    "knowledge": "Install last — adds persistent memory and external knowledge sources."
+  },
+  "mcpServers": {
+    "github": {
+      "tier": "core",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_PERSONAL_ACCESS_TOKEN}"
+      },
+      "description": "GitHub repo management: issues, PRs, checks, releases, branches, commits."
+    },
+    "playwright": {
+      "tier": "core",
+      "command": "npx",
+      "args": ["-y", "@playwright/mcp@latest"],
+      "env": {},
+      "description": "Browser automation and UI verification via Microsoft Playwright — navigate, click, type, screenshot, evaluate JS."
+    },
+    "filesystem": {
+      "tier": "core",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "${workspaceFolder}"],
+      "env": {},
+      "description": "Workspace file I/O — read, write, list, move, search within the project root."
+    },
+    "vercel": {
+      "tier": "deployment",
+      "type": "http",
+      "url": "https://mcp.vercel.com",
+      "env": {
+        "VERCEL_TOKEN": "${VERCEL_TOKEN}",
+        "VERCEL_TEAM_ID": "${VERCEL_TEAM_ID}",
+        "VERCEL_PROJECT_ID": "${VERCEL_PROJECT_ID}"
+      },
+      "description": "Vercel deployments — trigger builds, read preview URLs, manage env vars, monitor deploy status."
+    },
+    "railway": {
+      "tier": "deployment",
+      "command": "npx",
+      "args": ["-y", "@jasontanswe/railway-mcp"],
+      "env": {
+        "RAILWAY_API_TOKEN": "${RAILWAY_API_TOKEN}"
+      },
+      "description": "Railway services — deploy hooks, log streaming, env vars, service lifecycle, database provisioning."
+    },
+    "notion": {
+      "tier": "knowledge",
+      "command": "npx",
+      "args": ["-y", "@notionhq/notion-mcp-server"],
+      "env": {
+        "NOTION_API_KEY": "${NOTION_API_KEY}",
+        "OPENAPI_MCP_HEADERS": "{\"Authorization\": \"Bearer ${NOTION_API_KEY}\", \"Notion-Version\": \"2022-06-28\"}"
+      },
+      "description": "Notion workspace — internal runbooks, specs, and project documentation."
+    },
+    "fetch": {
+      "tier": "knowledge",
+      "command": "uvx",
+      "args": ["mcp-server-fetch"],
+      "env": {},
+      "description": "HTTP fetching — API endpoints, webhook testing, health checks, page content extraction."
+    },
+    "memory": {
+      "tier": "knowledge",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-memory"],
+      "env": {
+        "MEMORY_FILE_PATH": "${workspaceFolder}/.capy/memory/knowledge-graph.json"
+      },
+      "description": "Persistent knowledge graph — agent context, decisions, and outputs across sessions."
+    }
+  }
+}
