@@ -1,0 +1,28 @@
+# CODEOWNERS — GitHub automatically requests review from listed owners.
+# Syntax: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Default owner for everything in the repo.
+* @muffy86
+
+# Python backend
+/src/autogen_api_agent/       @muffy86
+/src/nanoclaw_bot/            @muffy86
+/tests/                       @muffy86
+/pyproject.toml               @muffy86
+/Makefile                     @muffy86
+
+# SvelteKit frontend
+/src/routes/                  @muffy86
+/src/lib/                     @muffy86
+/svelte.config.js             @muffy86
+/vite.config.ts               @muffy86
+/tsconfig.json                @muffy86
+/package.json                 @muffy86
+/pnpm-lock.yaml               @muffy86
+
+# Infra & CI
+/.github/                     @muffy86
+/Dockerfile                   @muffy86
+/docker-compose.yml           @muffy86
+/vercel.json                  @muffy86
+/scripts/                     @muffy86
