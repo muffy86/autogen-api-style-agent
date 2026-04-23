@@ -16,7 +16,10 @@ EOF
 }
 
 ensure_pytest_json_report() {
-  if pytest --help 2>/dev/null | grep -q -- '--json-report'; then
+  local pytest_help
+  pytest_help="$(pytest --help 2>/dev/null || true)"
+
+  if grep -q -- '--json-report' <<<"${pytest_help}"; then
     return 0
   fi
 
@@ -142,11 +145,14 @@ current = {}
 current.update(load_pytest(sys.argv[2]))
 current.update(load_vitest(sys.argv[4]))
 
+FAILING_STATUSES = {"failed", "error"}
+PRIOR_NON_FAILING = {"passed", "skipped", "xfailed", "xpassed", "pending", "todo"}
+
 shared = set(baseline) & set(current)
 new_failures = sorted(
     node_id
     for node_id in shared
-    if baseline[node_id] == "passed" and current[node_id] in {"failed", "error"}
+    if baseline[node_id] in PRIOR_NON_FAILING and current[node_id] in FAILING_STATUSES
 )
 removed = sorted(set(baseline) - set(current))
 new_tests = sorted(set(current) - set(baseline))
@@ -193,20 +199,6 @@ mkdir -p "${BASELINE_DIR}"
 rm -rf "${CURRENT_DIR}"
 mkdir -p "${CURRENT_DIR}"
 
-if [[ "${MODE}" == "check" ]]; then
-  baseline_missing=0
-  if [[ ! -f "${PYTEST_BASELINE}" ]]; then
-    baseline_missing=1
-  fi
-  if [[ -f vitest.config.ts && ! -f "${VITEST_BASELINE}" ]]; then
-    baseline_missing=1
-  fi
-  if [[ ${baseline_missing} -eq 1 ]]; then
-    echo "no baseline found — run ./scripts/regression-check.sh update to create one"
-    exit 0
-  fi
-fi
-
 pytest_status=0
 vitest_status=0
 vitest_skipped=0
@@ -230,6 +222,20 @@ fi
 if [[ ${vitest_skipped} -eq 0 && -f vitest.config.ts && ! -f "${VITEST_CURRENT}" ]]; then
   echo "error: vitest JSON report was not produced" >&2
   exit 1
+fi
+
+if [[ "${MODE}" == "check" ]]; then
+  baseline_missing=0
+  if [[ -f "${PYTEST_CURRENT}" && ! -f "${PYTEST_BASELINE}" ]]; then
+    baseline_missing=1
+  fi
+  if [[ -f "${VITEST_CURRENT}" && ! -f "${VITEST_BASELINE}" ]]; then
+    baseline_missing=1
+  fi
+  if [[ ${baseline_missing} -eq 1 ]]; then
+    echo "no baseline found — run ./scripts/regression-check.sh update to create one"
+    exit 0
+  fi
 fi
 
 if [[ "${MODE}" == "update" ]]; then

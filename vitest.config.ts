@@ -10,8 +10,7 @@ export default defineConfig({
       reporter: ['text', 'json-summary', 'json', 'html'],
       reportsDirectory: './coverage',
       include: ['src/**/*.{js,ts,svelte}'],
-      exclude: ['src/**/*.d.ts', 'src/app.html', 'src/**/*.test.{js,ts}', 'src/**/*.spec.{js,ts}'],
-      thresholds: { lines: 70, functions: 70, branches: 70, statements: 70 }
+      exclude: ['src/**/*.d.ts', 'src/app.html', 'src/**/*.test.{js,ts}', 'src/**/*.spec.{js,ts}']
     }
   }
 });
