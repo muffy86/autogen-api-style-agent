@@ -35,11 +35,24 @@ jobs:
         id: rollback_target
         run: |
           set -euo pipefail
-          # The first READY production deployment in `vercel ls --prod` is the one currently serving traffic.
-          prev_url=$(vercel ls --prod --token="$VERCEL_TOKEN" 2>/dev/null \
-            | awk '/https:\/\// {print $2; exit}')
-          echo "url=${prev_url:-}" >> "$GITHUB_OUTPUT"
-          echo "Rollback target: ${prev_url:-<none — first deploy>}"
+          # Query the Vercel API directly for the newest READY production deployment.
+          # This is the one currently serving traffic before this workflow deploys.
+          query="projectId=${VERCEL_PROJECT_ID}&target=production&state=READY&limit=1"
+          if [ -n "${VERCEL_ORG_ID:-}" ]; then
+            query="${query}&teamId=${VERCEL_ORG_ID}"
+          fi
+          response=$(curl -sS -H "Authorization: Bearer ${VERCEL_TOKEN}" \
+            "https://api.vercel.com/v6/deployments?${query}")
+          prev_id=$(echo "$response" | jq -r '.deployments[0].uid // empty')
+          prev_host=$(echo "$response" | jq -r '.deployments[0].url // empty')
+          if [ -n "$prev_host" ]; then
+            prev_url="https://${prev_host}"
+          else
+            prev_url=""
+          fi
+          echo "id=${prev_id}" >> "$GITHUB_OUTPUT"
+          echo "url=${prev_url}" >> "$GITHUB_OUTPUT"
+          echo "Rollback target: ${prev_url:-<none — first deploy>} (${prev_id:-n/a})"
 
       - name: Pull Vercel production env
         run: vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
@@ -66,15 +79,17 @@ jobs:
       - name: Rollback on verification failure
         if: failure() && steps.verify.outcome == 'failure'
         env:
+          PREV_DEPLOYMENT_ID: ${{ steps.rollback_target.outputs.id }}
           PREV_DEPLOYMENT_URL: ${{ steps.rollback_target.outputs.url }}
           FAILED_DEPLOYMENT_URL: ${{ steps.deploy.outputs.url }}
           COMMIT_SHA: ${{ github.sha }}
         run: |
-          if [ -z "${PREV_DEPLOYMENT_URL:-}" ]; then
-            echo "::error::No previous deployment captured — cannot auto-rollback. Manual intervention required."
+          target="${PREV_DEPLOYMENT_ID:-${PREV_DEPLOYMENT_URL:-}}"
+          if [ -z "$target" ]; then
+            echo "::error::No previous READY deployment captured — cannot auto-rollback. Manual intervention required."
             exit 1
           fi
-          ./scripts/rollback.sh "$PREV_DEPLOYMENT_URL"
+          ./scripts/rollback.sh "$target"
 
       - name: File incident issue on failure
         if: failure()
