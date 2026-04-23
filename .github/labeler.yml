@@ -1,0 +1,54 @@
+event-bus:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'src/event-bus/**'
+
+agents:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'src/agents/**'
+
+composio:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'src/composio/**'
+
+telegram:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'src/telegram/**'
+
+docs:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'docs/**'
+      - '**/*.md'
+
+ci:
+  - changed-files:
+    - any-glob-to-any-file:
+      - '.github/workflows/**'
+
+python:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'src/autogen_api_agent/**'
+      - 'src/nanoclaw_bot/**'
+      - 'tests/**/*.py'
+      - 'pyproject.toml'
+
+frontend:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'src/routes/**'
+      - 'src/lib/**'
+      - 'src/app.html'
+      - 'svelte.config.js'
+      - 'vite.config.ts'
+
+mcp:
+  - changed-files:
+    - any-glob-to-any-file:
+      - '.mcp/**'
+      - '.trae/mcp_settings.json'
+      - '.vscode/mcp.json'
