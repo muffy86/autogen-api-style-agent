@@ -223,7 +223,7 @@ async def test_fetch_url_returns_page_content() -> None:
     response = _FakeResponse("<html><body>Hello <b>world</b></body></html>")
     fake_client = _FakeAsyncClient(response)
 
-    with patch("autogen_api_agent.tools.web_search.httpx.AsyncClient", return_value=fake_client):
+    with patch("httpx.AsyncClient", return_value=fake_client):
         result = await fetch_url("https://example.com")
 
     assert result == "Hello world"
