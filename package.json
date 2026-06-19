@@ -12,7 +12,8 @@
     "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "db:init": "node scripts/init-db.js"
   },
   "devDependencies": {
     "@sveltejs/adapter-auto": "^7.0.0",
@@ -46,13 +47,12 @@
     "@ai-sdk/openai": "^3.0.47",
     "@ai-sdk/svelte": "^4.0.134",
     "@ai-sdk/xai": "^3.0.72",
-    "@supabase/ssr": "^0.6.1",
-    "@supabase/supabase-js": "^2.100.0",
     "ai": "^6.0.134",
     "dompurify": "^3.3.3",
     "highlight.js": "^11.11.1",
     "marked": "^17.0.5",
     "mathjs": "^15.1.1",
-    "zod": "^4.3.6"
+    "zod": "^4.3.6",
+    "@electric-sql/pglite": "^0.2.12"
   }
 }
