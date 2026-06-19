@@ -17,7 +17,6 @@ from .providers import ModelClientFactory
 from .teams import create_team
 from .utils import extract_final_response
 
-
 # Lazy-initialized Playwright browser for web browsing MCP tool
 _browser_instance = None
 
@@ -28,6 +27,7 @@ async def _get_browser():
     if _browser_instance is None:
         try:
             from playwright.async_api import async_playwright
+
             pw = await async_playwright().start()
             _browser_instance = await pw.chromium.launch(headless=True)
         except ImportError:
@@ -40,7 +40,12 @@ async def _handle_browse(url: str, wait_for: str | None = None) -> list[TextCont
     try:
         browser = await _get_browser()
         if browser is None:
-            return [TextContent(type="text", text="Error: Playwright not available. Install with: pip install playwright")]
+            return [
+                TextContent(
+                    type="text",
+                    text="Error: Playwright not available. Install with: pip install playwright",
+                )
+            ]
 
         page = await browser.new_page()
         try:
@@ -64,7 +69,12 @@ async def _handle_screenshot(url: str, full_page: bool = False) -> list[TextCont
     try:
         browser = await _get_browser()
         if browser is None:
-            return [TextContent(type="text", text="Error: Playwright not available. Install with: pip install playwright")]
+            return [
+                TextContent(
+                    type="text",
+                    text="Error: Playwright not available. Install with: pip install playwright",
+                )
+            ]
 
         page = await browser.new_page(viewport={"width": 1280, "height": 720})
         try:
@@ -84,6 +94,7 @@ def _handle_read_file(file_path: str) -> list[TextContent]:
     """Read file contents from local filesystem."""
     try:
         from pathlib import Path
+
         p = Path(file_path).expanduser().resolve()
         if not p.exists():
             return [TextContent(type="text", text=f"Error: File not found: {file_path}")]
@@ -102,6 +113,7 @@ def _handle_list_directory(dir_path: str = ".") -> list[TextContent]:
     """List directory contents."""
     try:
         from pathlib import Path
+
         p = Path(dir_path).expanduser().resolve()
         if not p.exists():
             return [TextContent(type="text", text=f"Error: Directory not found: {dir_path}")]
@@ -212,7 +224,8 @@ def _build_tools() -> list[Tool]:
         Tool(
             name="browse",
             description=(
-                "Navigate to a URL and return the page content. Uses headless browser for JS-heavy sites."
+                "Navigate to a URL and return the page content. "
+                "Uses headless browser for JS-heavy sites."
             ),
             inputSchema={
                 "type": "object",
@@ -233,7 +246,11 @@ def _build_tools() -> list[Tool]:
                 "type": "object",
                 "properties": {
                     "url": {"type": "string", "description": "URL to capture"},
-                    "full_page": {"type": "boolean", "default": False, "description": "Capture full page"},
+                    "full_page": {
+                        "type": "boolean",
+                        "default": False,
+                        "description": "Capture full page",
+                    },
                 },
                 "required": ["url"],
             },
@@ -255,7 +272,11 @@ def _build_tools() -> list[Tool]:
             inputSchema={
                 "type": "object",
                 "properties": {
-                    "path": {"type": "string", "default": ".", "description": "Directory path to list"},
+                    "path": {
+                        "type": "string",
+                        "default": ".",
+                        "description": "Directory path to list",
+                    },
                 },
             },
         ),

@@ -1,0 +1,47 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "sovereign-intelligence-os"
+version = "2026.5.0"
+description = "Private sovereign-intelligence orchestrator for Termux + Kivy on Galaxy Fold 7 class devices"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.10"
+authors = [{ name = "muffy86" }]
+keywords = ["termux", "openclaw", "mcp", "kivy", "chromadb", "litellm", "sovereign"]
+
+dependencies = [
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.34.0",
+    "pydantic>=2.0.0",
+    "pydantic-settings>=2.0.0",
+    "httpx>=0.28.0",
+    "python-dotenv>=1.0.0",
+    "litellm>=1.52.0",
+    "chromadb>=0.5.0",
+    "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+cv = ["opencv-python-headless>=4.9.0", "numpy>=1.26.0"]
+dev = ["pytest>=8.0.0", "pytest-asyncio>=0.23.0", "httpx>=0.28.0", "ruff>=0.6.0"]
+all = ["sovereign-intelligence-os[cv,dev]"]
+
+[project.scripts]
+sovereign-orchestrator = "orchestrator.__main__:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["orchestrator"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]

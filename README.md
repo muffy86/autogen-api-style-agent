@@ -467,3 +467,21 @@ GitHub Actions runs on every push and PR to `main`:
 ## License
 
 [MIT](LICENSE) — see [LICENSE](LICENSE) for details.
+---
+
+## Sovereign Intelligence OS (Termux + Fold 7)
+
+A companion subsystem lives under [`sovereign-intelligence-os/`](sovereign-intelligence-os/README.md).
+It bundles a Termux-hosted FastAPI orchestrator, ChromaDB memory, MCP bridges (GitHub + Google
+Drive + filesystem), a Kivy APK thin client, and Tasker gesture integration for Android.
+
+Quick start on a Termux device:
+
+```bash
+bash sovereign-intelligence-os/install-termux-phase1.sh
+bash sovereign-intelligence-os/scripts/launch-os.sh
+bash sovereign-intelligence-os/scripts/post-install.sh
+```
+
+See the subsystem's [README](sovereign-intelligence-os/README.md) and
+[security notes](sovereign-intelligence-os/docs/security-considerations.md) before running.
