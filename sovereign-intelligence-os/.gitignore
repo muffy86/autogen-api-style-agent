@@ -1,0 +1,18 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+.env
+.env.*
+!.env.example
+# User identity — contains personal info
+/configs/identity.md
+/identity.md
+# Memory store
+.sovereign-os/
+# Buildozer
+/kivy-apk/.buildozer/
+/kivy-apk/bin/
+/kivy-apk/build/
+# Logs
+*.log
