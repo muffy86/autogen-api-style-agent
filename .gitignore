@@ -94,3 +94,6 @@ __pycache__/
 dist/
 build/
 .venv/
+
+# MCP factory connectivity layer
+.capy/memory/
